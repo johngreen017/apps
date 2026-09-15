@@ -58,7 +58,11 @@
     });
 
     window.addEventListener('message', async function(event) {
-      const trustedGoogleOrigin = event.origin === 'https://script.google.com' || /\.googleusercontent\.com$/.test(new URL(event.origin).hostname);
+      let trustedGoogleOrigin = false;
+      try {
+        const hostname = new URL(event.origin).hostname;
+        trustedGoogleOrigin = event.origin === 'https://script.google.com' || hostname === 'googleusercontent.com' || hostname.endsWith('.googleusercontent.com');
+      } catch (error) {}
       if (!trustedGoogleOrigin || !event.data) return;
       if (event.data.type === 'escalafon-owner-session') {
         appMessageSource = event.source;
