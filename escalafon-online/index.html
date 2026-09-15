@@ -57,10 +57,16 @@
     });
 
     window.addEventListener('message', async function(event) {
-      if (event.source !== appFrame.contentWindow || !event.data || event.data.type !== 'escalafon-owner-session') return;
-      ownerSession = event.data.owner === true;
-      await updatePushButton();
-      if (ownerSession) await shareSubscription();
+      if (event.source !== appFrame.contentWindow || !event.data) return;
+      if (event.data.type === 'escalafon-owner-session') {
+        ownerSession = event.data.owner === true;
+        await updatePushButton();
+        if (ownerSession) await shareSubscription();
+      }
+      if (event.data.type === 'escalafon-enable-push') {
+        ownerSession = true;
+        await activatePush();
+      }
     });
 
     async function updatePushButton() {
@@ -84,25 +90,34 @@
       const subscriptionId = oneSignalSdk.User.PushSubscription.id;
       if (subscriptionId) {
         appFrame.contentWindow.postMessage({type:'escalafon-push-subscription', subscriptionId}, '*');
+        appFrame.contentWindow.postMessage({type:'escalafon-push-status', enabled:true}, '*');
       }
     }
 
-    pushButton.addEventListener('click', async function() {
-      if (!ownerSession || !oneSignalReady) return;
-      if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
-        alert('En iPhone o iPad, primero abre Compartir y elige “Añadir a pantalla de inicio”. Luego abre Escalafón Online desde su icono.');
+    async function activatePush() {
+      if (!ownerSession) return;
+      if (!oneSignalReady) {
+        appFrame.contentWindow.postMessage({type:'escalafon-push-status', enabled:false, error:'Las notificaciones todavía se están preparando. Inténtalo nuevamente en unos segundos.'}, '*');
         return;
       }
-      pushButton.disabled = true;
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
+        appFrame.contentWindow.postMessage({type:'escalafon-push-status', enabled:false, error:'Abre Escalafón Online desde su icono en la pantalla de inicio para activar notificaciones.'}, '*');
+        return;
+      }
       try {
         await oneSignalSdk.Notifications.requestPermission();
         await oneSignalSdk.User.PushSubscription.optIn();
         await shareSubscription();
+        if (!oneSignalSdk.User.PushSubscription.optedIn) {
+          appFrame.contentWindow.postMessage({type:'escalafon-push-status', enabled:false, error:'El permiso de notificaciones no fue concedido.'}, '*');
+        }
       } catch (error) {
-        alert('No fue posible activar las notificaciones. Revisa que Safari tenga permiso para mostrarlas.');
+        appFrame.contentWindow.postMessage({type:'escalafon-push-status', enabled:false, error:'No fue posible activar las notificaciones. Revisa el permiso de notificaciones del iPhone.'}, '*');
       }
       await updatePushButton();
-    });
+    }
+
+    pushButton.addEventListener('click', activatePush);
   </script>
 </body>
 </html>
