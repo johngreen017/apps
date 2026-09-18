@@ -18,8 +18,37 @@ async function api(params={}, options={}){
   return res.json();
 }
 
+function movementName(r){
+  const desc=String(r.descripcion||"").trim();
+  const commerce=String(r.comercio||"").trim();
+  const type=String(r.tipo||"").toUpperCase();
+
+  if(/recibo de apple/i.test(desc)) return "Apple";
+  if(/comprobante de compra copec/i.test(desc)) return "Copec";
+  if(type==="TRANSFERENCIA") return r.banco ? "Transferencia · "+r.banco : "Transferencia";
+  if(type==="GIRO") return r.banco ? "Giro en cajero · "+r.banco : "Giro en cajero";
+
+  const badCommerce =
+    !commerce ||
+    commerce.length > 48 ||
+    /^(cia|ta de|ir a|emos|tura|tos y|eficios)\b/i.test(commerce) ||
+    /recuerda que|aviso imp|banca persona/i.test(commerce);
+
+  return badCommerce ? (desc || "Movimiento") : commerce;
+}
+
+function movementCategory(r){
+  const type=String(r.tipo||"").toUpperCase();
+  if(type==="TRANSFERENCIA") return "Transferencias";
+  if(type==="GIRO") return "Efectivo";
+  if(/recibo de apple/i.test(String(r.descripcion||""))) return "Suscripciones";
+  return r.categoria||"Otros";
+}
+
 function render(rows=[]){
-  rows = rows.filter(r => String(r.estado || "").toUpperCase() !== "DESCARTADO");
+  rows = rows
+    .filter(r => String(r.estado || "").toUpperCase() !== "DESCARTADO")
+    .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const box=$("movements");
   $("count").textContent=rows.length;
   const now=new Date();
@@ -31,9 +60,9 @@ function render(rows=[]){
   if(!rows.length){box.innerHTML='<p class="empty">Aún no hay movimientos.</p>';return;}
   box.innerHTML=rows.slice(0,30).map(r=>`
     <div class="movement">
-      <div><strong>${escapeHtml(r.comercio||r.descripcion||"Movimiento")}</strong></div>
+      <div><strong>${escapeHtml(movementName(r))}</strong></div>
       <div class="amount">${money.format(Number(r.monto||0))}</div>
-      <div class="meta">${escapeHtml(r.categoria||"Otros")} · ${escapeHtml(r.banco||"")} · ${formatDate(r.fecha)}</div>
+      <div class="meta">${escapeHtml(movementCategory(r))}${r.banco ? " · "+escapeHtml(r.banco) : ""} · ${formatDate(r.fecha)}</div>
     </div>`).join("");
 }
 function escapeHtml(s=""){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
