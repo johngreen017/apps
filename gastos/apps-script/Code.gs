@@ -5,7 +5,7 @@ function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'health';
   if (action === 'list') return json_({ ok:true, movimientos:listMovimientos_(Number(e.parameter.limit || 100)) });
   if (action === 'sync') return json_(syncGmail_());
-  return json_({ ok:true, service:'Mis Gastos', version:'0.1.0' });
+  return json_({ ok:true, service:'Mis Gastos', version:'0.2.0' });
 }
 
 function doPost(e) {
@@ -51,6 +51,29 @@ function existeMensaje_(messageId) {
   const sh=ss_().getSheetByName(SHEET_MOVIMIENTOS);
   if(sh.getLastRow()<2) return false;
   return sh.getRange(2,15,sh.getLastRow()-1,1).createTextFinder(messageId).matchEntireCell(true).findNext() !== null;
+}
+
+function instalar() {
+  // Ejecutar una vez desde Apps Script. Solicita permisos y deja la sincronización automática activa.
+  syncGmail_();
+
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'syncGmail_')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  ScriptApp.newTrigger('syncGmail_')
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  PropertiesService.getScriptProperties().setProperty('INSTALADO_EN', new Date().toISOString());
+  return 'Instalación completada: Gmail sincroniza automáticamente cada hora.';
+}
+
+function desinstalarTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'syncGmail_')
+    .forEach(t => ScriptApp.deleteTrigger(t));
 }
 
 function json_(obj) {
