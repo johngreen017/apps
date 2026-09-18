@@ -47,5 +47,5 @@ jobs:
       - name: Update web app deployment
         run: |
           clasp deploy \
-            --deploymentId "AKfycbwTGvQmKBtUoBAv8BI3TjybUEJVmoWuc_l7Vlwy5NXPUZuUv6_4MaOANbCpxwrcZeOU" \
+            --deploymentId "AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g" \
             --description "Auto deploy from GitHub ${GITHUB_SHA}"
