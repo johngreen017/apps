@@ -21,20 +21,33 @@ async function api(params={}, options={}){
 function movementName(r){
   const desc=String(r.descripcion||"").trim();
   const commerce=String(r.comercio||"").trim();
-  const type=String(r.tipo||"").toUpperCase();
+  let type=String(r.tipo||"").toUpperCase();
 
-  if(/recibo de apple/i.test(desc)) return "Apple";
-  if(/comprobante de compra copec/i.test(desc)) return "Copec";
-  if(type==="TRANSFERENCIA") return r.banco ? "Transferencia · "+r.banco : "Transferencia";
-  if(type==="GIRO") return r.banco ? "Giro en cajero · "+r.banco : "Giro en cajero";
+  // Compatibilidad con movimientos antiguos guardados como GASTO.
+  if(type==="GASTO"){
+    if(/\bpago\b|recibo de apple|comprobante de pago/i.test(desc)) type="PAGO";
+    else if(/\bcompra\b|comprobante de compra|aviso de compra/i.test(desc)) type="COMPRA";
+  }
 
-  const badCommerce =
-    !commerce ||
-    commerce.length > 48 ||
-    /^(cia|ta de|ir a|emos|tura|tos y|eficios)\b/i.test(commerce) ||
-    /recuerda que|aviso imp|banca persona/i.test(commerce);
+  const cleanCommerce = (() => {
+    if(/recibo de apple/i.test(desc)) return "Apple";
+    if(/comprobante de compra copec/i.test(desc)) return "Copec";
+    const bad =
+      !commerce ||
+      commerce.length > 48 ||
+      /^(cia|ta de|ir a|emos|tura|tos y|eficios)\b/i.test(commerce) ||
+      /recuerda que|aviso imp|banca persona/i.test(commerce);
+    return bad ? "" : commerce;
+  })();
 
-  return badCommerce ? (desc || "Movimiento") : commerce;
+  if(type==="TRANSFERENCIA"){
+    return r.banco ? "Transferencia Banco "+r.banco.replace(/^Banco\s+/i,"") : "Transferencia";
+  }
+  if(type==="PAGO") return "Pago "+(cleanCommerce || desc.replace(/^.*?pago\s*/i,"").trim() || "realizado");
+  if(type==="COMPRA") return "Compra "+(cleanCommerce || desc.replace(/^.*?compra\s*/i,"").trim() || "realizada");
+  if(type==="GIRO") return r.banco ? "Giro Banco "+r.banco.replace(/^Banco\s+/i,"") : "Giro";
+
+  return cleanCommerce || desc || "Movimiento";
 }
 
 function movementCategory(r){
