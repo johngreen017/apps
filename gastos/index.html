@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>Mis Gastos</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">CONTROL PERSONAL</p>
+        <h1>Mis Gastos</h1>
+      </div>
+      <button id="syncBtn" class="primary">Sincronizar</button>
+    </header>
+
+    <section id="setup" class="notice hidden">
+      Falta configurar la URL del Web App de Google Apps Script en <code>app.js</code>.
+    </section>
+
+    <section class="summary">
+      <article><span>Gastado este mes</span><strong id="monthTotal">$0</strong></article>
+      <article><span>Movimientos</span><strong id="count">0</strong></article>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Últimos movimientos</h2>
+        <button id="refreshBtn" class="ghost">Actualizar</button>
+      </div>
+      <div id="movements" class="movements">
+        <p class="empty">Aún no hay movimientos.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Agregar manualmente</h2>
+      <form id="manualForm" class="form">
+        <input id="description" required placeholder="Descripción o comercio">
+        <input id="amount" required type="number" min="0" step="1" placeholder="Monto">
+        <select id="category">
+          <option>Otros</option>
+          <option>Alimentación</option>
+          <option>Supermercado</option>
+          <option>Transporte</option>
+          <option>Combustible</option>
+          <option>Hogar</option>
+          <option>Salud</option>
+          <option>Educación</option>
+          <option>Ropa</option>
+          <option>Suscripciones</option>
+          <option>Servicios</option>
+          <option>Transferencias</option>
+        </select>
+        <button class="primary" type="submit">Guardar gasto</button>
+      </form>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
