@@ -1,4 +1,4 @@
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz2bVldJdW9vPuUCLuicFOvYhZueD8_gnC5EVZz3TOAfD4x8Po8CWX4J1aYZFpKNGAsOw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwTGvQmKBtUoBAv8BI3TjybUEJVmoWuc_l7Vlwy5NXPUZuUv6_4MaOANbCpxwrcZeOU/exec";
 
 const $ = (id) => document.getElementById(id);
 const money = new Intl.NumberFormat("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0});
