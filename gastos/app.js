@@ -19,6 +19,7 @@ async function api(params={}, options={}){
 }
 
 function render(rows=[]){
+  rows = rows.filter(r => String(r.estado || "").toUpperCase() !== "DESCARTADO");
   const box=$("movements");
   $("count").textContent=rows.length;
   const now=new Date();
