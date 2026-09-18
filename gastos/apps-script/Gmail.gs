@@ -24,53 +24,85 @@ function parseBankMail_(msg) {
   const from=(msg.getFrom()||'').toLowerCase();
   const body=stripHtml_(msg.getBody()||'');
   const text=(subject+'\n'+body).replace(/\s+/g,' ').trim();
-  const lower=text.toLowerCase();
+  const s=subject.toLowerCase();
+  const t=text.toLowerCase();
 
-  // 1) Excluir publicidad, ofertas, campañas y newsletters.
-  const promoWords=[
-    'oferta','ofertas','promoción','promocion','descuento','descuentos','beneficio',
-    'beneficios','imperdible','aprovecha','hasta un','% dcto','% dto','cashback',
-    'cupón','cupon','cyber','black friday','newsletter','novedades','campaña',
-    'campana','sorteo','premio','participa','exclusivo para ti','solo por hoy',
-    'vigencia','bases legales','suscríbete','suscribete'
-  ];
-  const hasPromo = promoWords.some(w=>lower.includes(w));
-
-  // 2) Exigir lenguaje que describa un movimiento YA REALIZADO.
-  const transactionPatterns=[
-    /se\s+(?:ha\s+)?realiz(?:ó|o)\s+(?:una\s+)?compra/i,
-    /realizaste\s+(?:una\s+)?compra/i,
-    /hemos\s+registrado\s+(?:una\s+)?compra/i,
-    /compra\s+(?:realizada|efectuada|aprobada|autorizada)/i,
-    /cargo\s+(?:realizado|efectuado|aprobado|autorizado)/i,
-    /pago\s+(?:realizado|efectuado|aprobado|autorizado)/i,
-    /transacci[oó]n\s+(?:realizada|efectuada|aprobada|autorizada)/i,
-    /transferencia\s+(?:realizada|efectuada|enviada|recibida)/i,
-    /retiro\s+(?:realizado|efectuado)/i,
+  // Modo estricto: SOLO se aceptan correos cuyo asunto parece una transacción real.
+  // Se prioriza precisión sobre cobertura para evitar que ofertas entren como gastos.
+  const subjectTransactionPatterns=[
+    /comprobante\s+de\s+compra/i,
+    /comprobante\s+de\s+pago/i,
+    /aviso\s+de\s+compra/i,
+    /notificaci[oó]n\s+de\s+compra/i,
+    /compra\s+(?:realizada|aprobada|autorizada|efectuada)/i,
+    /cargo\s+(?:realizado|aprobado|autorizado|efectuado)/i,
+    /pago\s+(?:realizado|aprobado|autorizado|efectuado)/i,
+    /aviso\s+de\s+transferencia/i,
+    /aviso\s+de\s+env[ií]o\s+o\s+recepci[oó]n\s+de\s+dinero/i,
+    /transferencia\s+(?:realizada|enviada|recibida|efectuada)/i,
+    /notificaci[oó]n\s+de\s+giro/i,
     /giro\s+(?:realizado|efectuado)/i,
-    /(?:tu|su)\s+tarjeta\s+terminada\s+en\s+\d{4}/i,
-    /(?:tarjeta|cuenta)\s+\*{2,}\d{2,4}/i
+    /retiro\s+(?:realizado|efectuado)/i,
+    /tu\s+recibo\s+de\s+apple/i,
+    /recibo\s+de\s+pago/i
   ];
-  const hasStrongTransactionSignal = transactionPatterns.some(p=>p.test(text));
 
-  // 3) Debe existir un monto claramente monetario.
+  if(!subjectTransactionPatterns.some(p=>p.test(subject))) return null;
+
+  // Bloqueos explícitos para publicidad, cobranza y resúmenes.
+  const rejectSubjectPatterns=[
+    /oferta|promoci[oó]n|descuento|beneficio|dcto\.?|\boff\b|cashback/i,
+    /cuotas?\s+sin\s+inter[eé]s/i,
+    /estrena|nuevo\s+nissan|jeep|iphone\s+\d+/i,
+    /seguro.*sin\s+costo/i,
+    /cartola|estado\s+de\s+cuenta|resumen\s+mensual/i,
+    /ponte\s+al\s+d[ií]a|opciones\s+para\s+ponerte\s+al\s+d[ií]a|ya\s+venci[oó]/i,
+    /selecci[oó]n|recomendad[oa]|para\s+ti/i
+  ];
+  if(rejectSubjectPatterns.some(p=>p.test(subject))) return null;
+
+  const promoBodyWords=[
+    'hasta 40%','hasta un 40%','% dcto','% dto','% off','beneficios exclusivos',
+    'bases legales','vigencia de la promoción','aprovecha','cupón','código promocional',
+    'sorteo','premio','solo por hoy','financiamiento desde','simula tu crédito'
+  ];
+  if(promoBodyWords.some(w=>t.includes(w))) return null;
+
+  // La transacción debe tener un monto explícito.
   const moneyMatches=[...text.matchAll(/(?:CLP\s*|\$\s*)([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{4,})/gi)];
   if(!moneyMatches.length) return null;
 
-  // En publicidad pueden aparecer muchos precios. En una transacción normalmente hay
-  // señales fuertes de compra/cargo y un emisor financiero identificable.
-  const banco=detectarBanco_(from+' '+text);
-  if(!banco) return null;
-  if(!hasStrongTransactionSignal) return null;
-  if(hasPromo && !/compra\s+(?:realizada|efectuada|aprobada|autorizada)|cargo\s+(?:realizado|efectuado|aprobado|autorizado)|transferencia\s+(?:realizada|efectuada|enviada|recibida)/i.test(text)) return null;
+  // El cuerpo además debe contener evidencia transaccional, no solo un precio.
+  const bodyTransactionPatterns=[
+    /se\s+(?:ha\s+)?realiz(?:ó|o)/i,
+    /realizaste/i,
+    /hemos\s+registrado/i,
+    /monto\s+(?:de|por)/i,
+    /por\s+un\s+monto/i,
+    /tarjeta\s+(?:terminada\s+en|\*{2,})/i,
+    /cuenta\s+(?:terminada\s+en|\*{2,})/i,
+    /fecha\s+de\s+(?:la\s+)?transacci[oó]n/i,
+    /n[uú]mero\s+de\s+operaci[oó]n/i,
+    /c[oó]digo\s+de\s+autorizaci[oó]n/i,
+    /comercio\s*:/i,
+    /destinatari[oa]\s*:/i,
+    /transferencia\s+electr[oó]nica/i
+  ];
 
-  // Preferir el primer monto cercano a lenguaje transaccional.
+  const specialReceipt=/comprobante\s+de\s+compra|tu\s+recibo\s+de\s+apple/i.test(subject);
+  if(!specialReceipt && !bodyTransactionPatterns.some(p=>p.test(text))) return null;
+
+  const banco=detectarBanco_(from+' '+text);
+  const allowedNonBankReceipt = /comprobante\s+de\s+compra|tu\s+recibo\s+de\s+apple/i.test(subject);
+  if(!banco && !allowedNonBankReceipt) return null;
+
+  // Elegir el monto más cercano a texto transaccional; si no, usar el primero.
   let monto=Number(moneyMatches[0][1].replace(/\./g,''));
   for(const m of moneyMatches){
-    const start=Math.max(0,m.index-120);
-    const end=Math.min(text.length,m.index+m[0].length+120);
+    const start=Math.max(0,m.index-140);
+    const end=Math.min(text.length,m.index+m[0].length+140);
     const context=text.slice(start,end);
-    if(transactionPatterns.some(p=>p.test(context))){
+    if(bodyTransactionPatterns.some(p=>p.test(context))){
       monto=Number(m[1].replace(/\./g,''));
       break;
     }
@@ -86,7 +118,8 @@ function parseBankMail_(msg) {
     moneda:'CLP',
     categoria:clasificar_(comercio||subject),
     banco,
-    tipo: /transferencia/i.test(text) ? 'TRANSFERENCIA' : (/giro|retiro/i.test(text) ? 'GIRO' : 'GASTO')
+    tipo:/transferencia|env[ií]o\s+o\s+recepci[oó]n\s+de\s+dinero/i.test(subject) ? 'TRANSFERENCIA' :
+         (/giro|retiro/i.test(subject) ? 'GIRO' : 'GASTO')
   };
 }
 
@@ -95,9 +128,9 @@ function detectarBanco_(text) {
   const reglas=[
     ['Santander',['santander','santander.cl']],
     ['Banco de Chile',['banco de chile','bancochile','bancochile.cl']],
-    ['BCI',['bci','bci.cl']],
+    ['BCI',[' bci ','bci.cl','@bci']],
     ['BancoEstado',['bancoestado','bancoestado.cl']],
-    ['CMR Falabella',['cmr','bancofalabella','falabella.com']],
+    ['CMR Falabella',['cmr','bancofalabella','bancofalabella.cl']],
     ['Scotiabank',['scotiabank','scotiabankchile']],
     ['Itaú',['itau','itaú','itau.cl']],
     ['Mercado Pago',['mercado pago','mercadopago']],
@@ -115,9 +148,7 @@ function extraerComercio_(text) {
   ];
   for(const p of patrones){
     const m=text.match(p);
-    if(m){
-      return m[1].replace(/\s+(por|monto|con).*$/i,'').trim();
-    }
+    if(m) return m[1].replace(/\s+(por|monto|con).*$/i,'').trim();
   }
   return '';
 }
