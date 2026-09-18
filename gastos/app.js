@@ -1,4 +1,4 @@
-const GAS_URL = ""; // Pegar aquí la URL /exec del Web App de Apps Script
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxSthEmInpSZZePa0AuMmWClpnMVqpoq7m3LRXMlEg11llwyk4Ker6U7aNlbRWCTKvQHg/exec";
 
 const $ = (id) => document.getElementById(id);
 const money = new Intl.NumberFormat("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0});
@@ -11,9 +11,9 @@ function apiReady(){
 
 async function api(params={}, options={}){
   if(!apiReady()) throw new Error("Apps Script no configurado");
-  const url = new URL(GAS_URL);
-  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
-  const res = await fetch(url, options);
+  const u = new URL(GAS_URL);
+  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
+  const res = await fetch(u, options);
   if(!res.ok) throw new Error("Error de conexión");
   return res.json();
 }
