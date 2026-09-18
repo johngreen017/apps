@@ -59,6 +59,24 @@ function doPost(e) {
     return json_({ ok:true, movimiento });
   }
 
+  // Endpoint automático para notificaciones de Scotia.
+  // El Atajo solo envía el texto completo de la notificación.
+  if (action === 'scotia_notification') {
+    const texto = String(e.parameter.texto || '').trim();
+    if (!texto) return json_({ ok:false, error:'Notificación vacía' });
+
+    const parsed = parseScotiaNotification_(texto);
+    if (!parsed.ok) return json_(parsed);
+
+    // Evitar duplicados por misma tarjeta+monto+comercio en una ventana corta.
+    if (existeMovimientoSimilar_(parsed.movimiento)) {
+      return json_({ ok:true, duplicado:true, movimiento:parsed.movimiento });
+    }
+
+    const movimiento = addMovimiento_(parsed.movimiento);
+    return json_({ ok:true, duplicado:false, movimiento });
+  }
+
   return json_({ ok:false, error:'Acción no soportada' });
 }
 
@@ -96,6 +114,69 @@ function existeMensaje_(messageId) {
   const sh=ss_().getSheetByName(SHEET_MOVIMIENTOS);
   if(sh.getLastRow()<2) return false;
   return sh.getRange(2,15,sh.getLastRow()-1,1).createTextFinder(messageId).matchEntireCell(true).findNext() !== null;
+}
+
+function parseScotiaNotification_(texto) {
+  const t = texto.replace(/\s+/g,' ').trim();
+
+  // Ejemplo real:
+  // "Se realizó compra con tu tarjeta de débito xxxx7892 por $73.832 en COPEC APP. Si desconoces..."
+  const m = t.match(/Se\s+realiz[oó]\s+compra\s+con\s+tu\s+tarjeta\s+de\s+(d[eé]bito|cr[eé]dito)\s+x{2,}(\d{4})\s+por\s+\$\s*([0-9.]+)\s+en\s+(.+?)(?=\.\s*Si\s+desconoces|$)/i);
+  if (!m) {
+    return { ok:false, error:'Formato de notificación Scotia no reconocido' };
+  }
+
+  const tipoTarjeta = /cr[eé]dito/i.test(m[1]) ? 'Crédito' : 'Débito';
+  const ultimos4 = m[2];
+  const monto = Number(m[3].replace(/\./g,''));
+  const comercio = m[4].trim().replace(/[\s.]+$/,'');
+
+  if (!monto || monto <= 0 || !comercio) {
+    return { ok:false, error:'No se pudo extraer monto o comercio' };
+  }
+
+  const descripcion = 'Compra ' + comercio;
+  return {
+    ok:true,
+    movimiento:{
+      descripcion,
+      comercio,
+      monto,
+      moneda:'CLP',
+      categoria:clasificar_(comercio),
+      banco:'Scotiabank',
+      cuenta:tipoTarjeta + ' ' + ultimos4,
+      tipo:'COMPRA',
+      fuente:'NOTIFICACION_IPHONE',
+      estado:'CONFIRMADO'
+    }
+  };
+}
+
+function existeMovimientoSimilar_(m) {
+  const sh=ss_().getSheetByName(SHEET_MOVIMIENTOS);
+  const last=sh.getLastRow();
+  if(last<2) return false;
+
+  const start=Math.max(2,last-30);
+  const values=sh.getRange(start,1,last-start+1,16).getValues();
+  const now=Date.now();
+
+  return values.some(r=>{
+    const fecha=r[1] instanceof Date ? r[1].getTime() : new Date(r[1]).getTime();
+    const comercio=String(r[4]||'').trim().toLowerCase();
+    const monto=Number(r[5]||0);
+    const banco=String(r[9]||'').trim().toLowerCase();
+    const cuenta=String(r[10]||'').trim().toLowerCase();
+    const fuente=String(r[13]||'').trim().toUpperCase();
+
+    return fuente==='NOTIFICACION_IPHONE' &&
+      banco==='scotiabank' &&
+      monto===Number(m.monto) &&
+      comercio===String(m.comercio||'').trim().toLowerCase() &&
+      cuenta===String(m.cuenta||'').trim().toLowerCase() &&
+      !isNaN(fecha) && Math.abs(now-fecha) < 10*60*1000;
+  });
 }
 
 function instalar() {
