@@ -9,11 +9,56 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  const action = e.parameter.action;
+  const action = (e && e.parameter && e.parameter.action) || '';
+
   if (action === 'add') {
     const payload = JSON.parse(e.parameter.payload || '{}');
     return json_({ ok:true, movimiento:addMovimiento_(payload) });
   }
+
+  // Endpoint simple para Atajos de iPhone.
+  // Recibe campos de formulario sin necesidad de construir JSON en el Atajo.
+  if (action === 'shortcut') {
+    const tipo = String(e.parameter.tipo || 'COMPRA').toUpperCase();
+    const comercio = String(e.parameter.comercio || '').trim();
+    const banco = String(e.parameter.banco || '').trim();
+    const monto = Number(String(e.parameter.monto || '0').replace(/[^0-9]/g,''));
+
+    if (!monto || monto <= 0) {
+      return json_({ ok:false, error:'Monto inválido' });
+    }
+
+    const tipoValido = ['COMPRA','PAGO','TRANSFERENCIA','GIRO'].includes(tipo) ? tipo : 'COMPRA';
+
+    let descripcion = String(e.parameter.descripcion || '').trim();
+    if (!descripcion) {
+      if (tipoValido === 'TRANSFERENCIA') descripcion = banco ? 'Transferencia Banco ' + banco.replace(/^Banco\s+/i,'') : 'Transferencia';
+      else if (tipoValido === 'PAGO') descripcion = 'Pago ' + (comercio || 'realizado');
+      else if (tipoValido === 'GIRO') descripcion = banco ? 'Giro Banco ' + banco.replace(/^Banco\s+/i,'') : 'Giro';
+      else descripcion = 'Compra ' + (comercio || 'realizada');
+    }
+
+    let categoria = String(e.parameter.categoria || '').trim();
+    if (!categoria) {
+      if (tipoValido === 'TRANSFERENCIA') categoria = 'Transferencias';
+      else if (tipoValido === 'GIRO') categoria = 'Efectivo';
+      else categoria = clasificar_(comercio || descripcion);
+    }
+
+    const movimiento = addMovimiento_({
+      descripcion,
+      comercio: comercio || descripcion,
+      monto,
+      moneda:'CLP',
+      categoria,
+      banco,
+      tipo:tipoValido,
+      fuente:'ATAJO_IPHONE'
+    });
+
+    return json_({ ok:true, movimiento });
+  }
+
   return json_({ ok:false, error:'Acción no soportada' });
 }
 
