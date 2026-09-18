@@ -111,7 +111,8 @@ function parseBankMail_(msg) {
 
   const comercio=extraerComercio_(text);
   const tipo=/transferencia|env[ií]o\s+o\s+recepci[oó]n\s+de\s+dinero/i.test(subject) ? 'TRANSFERENCIA' :
-             (/giro|retiro/i.test(subject) ? 'GIRO' : 'GASTO');
+             (/giro|retiro/i.test(subject) ? 'GIRO' :
+             (/pago|recibo de apple/i.test(subject) ? 'PAGO' : 'COMPRA'));
   let categoria=clasificar_(comercio||subject);
   if(tipo==='TRANSFERENCIA') categoria='Transferencias';
   if(tipo==='GIRO') categoria='Efectivo';
