@@ -110,16 +110,22 @@ function parseBankMail_(msg) {
   if(!monto || monto<=0) return null;
 
   const comercio=extraerComercio_(text);
+  const tipo=/transferencia|env[ií]o\s+o\s+recepci[oó]n\s+de\s+dinero/i.test(subject) ? 'TRANSFERENCIA' :
+             (/giro|retiro/i.test(subject) ? 'GIRO' : 'GASTO');
+  let categoria=clasificar_(comercio||subject);
+  if(tipo==='TRANSFERENCIA') categoria='Transferencias';
+  if(tipo==='GIRO') categoria='Efectivo';
+  if(/recibo de apple/i.test(subject)) categoria='Suscripciones';
+
   return {
     fecha:msg.getDate(),
     descripcion:subject,
     comercio:comercio||subject,
     monto,
     moneda:'CLP',
-    categoria:clasificar_(comercio||subject),
+    categoria,
     banco,
-    tipo:/transferencia|env[ií]o\s+o\s+recepci[oó]n\s+de\s+dinero/i.test(subject) ? 'TRANSFERENCIA' :
-         (/giro|retiro/i.test(subject) ? 'GIRO' : 'GASTO')
+    tipo
   };
 }
 
