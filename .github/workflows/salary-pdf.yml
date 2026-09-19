@@ -1,0 +1,99 @@
+name: Procesar liquidación de sueldo
+
+on:
+  repository_dispatch:
+    types:
+      - salary_pdf
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  salary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar herramientas PDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qpdf poppler-utils
+
+      - name: Validar secretos
+        env:
+          PDF_PASSWORD: ${{ secrets.PDF_PASSWORD }}
+          SALARY_CALLBACK_TOKEN: ${{ secrets.SALARY_CALLBACK_TOKEN }}
+        run: |
+          if [ -z "$PDF_PASSWORD" ]; then
+            echo "Falta el secreto PDF_PASSWORD"
+            exit 1
+          fi
+          if [ -z "$SALARY_CALLBACK_TOKEN" ]; then
+            echo "Falta el secreto SALARY_CALLBACK_TOKEN"
+            exit 1
+          fi
+
+      - name: Descargar liquidación cifrada
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          FILE_ID: ${{ github.event.client_payload.file_id }}
+        run: |
+          test -n "$FILE_ID"
+          curl --fail --location --retry 3             "https://drive.usercontent.google.com/download?id=$FILE_ID&export=download&confirm=t"             --output liquidacion.pdf
+          test -s liquidacion.pdf
+
+      - name: Descifrar y extraer líquido
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          PDF_PASSWORD: ${{ secrets.PDF_PASSWORD }}
+        run: |
+          set -euo pipefail
+          qpdf --password="$PDF_PASSWORD" --decrypt liquidacion.pdf liquidacion-abierta.pdf
+          pdftotext -layout liquidacion-abierta.pdf liquidacion.txt
+          python3 - <<'PY'
+          import re, pathlib, sys
+          text = pathlib.Path("liquidacion.txt").read_text(errors="ignore")
+          text = text.replace("\xa0", " ")
+          patterns = [
+              r"L[IÍ]QUIDO\s+A\s+PAGAR\s*[:$.-]*\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{5,})",
+              r"TOTAL\s+L[IÍ]QUIDO\s*[:$.-]*\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{5,})",
+              r"ALCANCE\s+L[IÍ]QUIDO\s*[:$.-]*\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{5,})",
+              r"MONTO\s+A\s+DEPOSITAR\s*[:$.-]*\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{5,})",
+              r"L[IÍ]QUIDO(?:\s+TOTAL)?\s*[:$.-]*\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{5,})",
+          ]
+          amount = None
+          for p in patterns:
+              m = re.search(p, text, flags=re.I)
+              if m:
+                  amount = int(re.sub(r"\D", "", m.group(1)))
+                  if amount > 0:
+                      break
+          if not amount:
+              print("No se encontró el monto líquido", file=sys.stderr)
+              sys.exit(2)
+          pathlib.Path("monto.txt").write_text(str(amount))
+          PY
+
+      - name: Registrar sueldo y limpiar archivo temporal
+        if: ${{ github.event_name == 'repository_dispatch' && success() }}
+        env:
+          CALLBACK_TOKEN: ${{ secrets.SALARY_CALLBACK_TOKEN }}
+          FILE_ID: ${{ github.event.client_payload.file_id }}
+          MESSAGE_ID: ${{ github.event.client_payload.message_id }}
+          FECHA_ISO: ${{ github.event.client_payload.fecha_iso }}
+          PERIODO: ${{ github.event.client_payload.periodo }}
+        run: |
+          MONTO="$(cat monto.txt)"
+          curl --fail --location --silent --show-error             --request POST             --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=ok"             --data-urlencode "monto=$MONTO"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             --data-urlencode "fecha=$FECHA_ISO"             --data-urlencode "periodo=$PERIODO"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null
+
+      - name: Limpiar archivo si falla el procesamiento
+        if: ${{ github.event_name == 'repository_dispatch' && failure() }}
+        env:
+          CALLBACK_TOKEN: ${{ secrets.SALARY_CALLBACK_TOKEN }}
+          FILE_ID: ${{ github.event.client_payload.file_id }}
+          MESSAGE_ID: ${{ github.event.client_payload.message_id }}
+        run: |
+          curl --location --silent --show-error             --request POST             --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=error"             --data-urlencode "error=No se pudo procesar la liquidación"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null || true
+
+      - name: Borrar archivos locales
+        if: always()
+        run: rm -f liquidacion.pdf liquidacion-abierta.pdf liquidacion.txt monto.txt
