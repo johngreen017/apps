@@ -1,0 +1,13 @@
+{
+  "name": "mis-gastos-salary-pdf-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "pdfjs-dist": "^5.4.149"
+  }
+}
