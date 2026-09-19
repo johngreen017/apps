@@ -38,6 +38,13 @@ h2{margin:0;font-size:clamp(20px,3vw,25px);font-weight:780;letter-spacing:-.03em
 .ghost:hover{background:#3a3a40}
 .icon-btn{width:43px;height:43px;padding:0;font-size:28px;background:var(--surface-3);color:white}
 .notice{margin:0 0 17px;background:#332b1b;color:#ffe7b4;border:1px solid #69512b}
+.pending-salary{border:1px solid rgba(96,164,255,.32);background:linear-gradient(145deg,#17253b,var(--surface))}
+.salary-review + .salary-review{border-top:1px solid var(--line);margin-top:18px;padding-top:18px}
+.salary-review h2{font-variant-numeric:tabular-nums;font-size:clamp(26px,5vw,35px);margin:10px 0}
+.salary-review-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+.salary-review-actions button{flex:1 1 150px;min-height:45px}
+.salary-review-status:empty{display:none}
+
 .hidden{display:none!important}
 .filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:9px;margin-bottom:12px}
 .filters input,.filters select,.form input,.form select{
