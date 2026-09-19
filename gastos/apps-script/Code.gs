@@ -1,12 +1,17 @@
 const SPREADSHEET_ID = '1yOX3FL_KemWqDT9IBNcBLm3pC63U42-j4to-yC-0Hfk';
 const SHEET_MOVIMIENTOS = 'MOVIMIENTOS';
 const SHEET_REGLAS = 'REGLAS';
+const SHEET_INGRESOS = 'INGRESOS';
 
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'health';
-  if (action === 'list') return json_({ ok:true, movimientos:listMovimientos_(Number(e.parameter.limit || 300)) });
+  if (action === 'list') return json_({
+    ok:true,
+    movimientos:listMovimientos_(Number(e.parameter.limit || 300)),
+    ingresos:listIngresos_(Number(e.parameter.incomeLimit || 100))
+  });
   if (action === 'sync') return json_(syncGmail_());
-  return json_({ ok:true, service:'Mis Gastos', version:'0.3.0' });
+  return json_({ ok:true, service:'Mis Gastos', version:'0.4.0' });
 }
 
 function doPost(e) {
@@ -15,6 +20,22 @@ function doPost(e) {
   if (action === 'add') {
     const payload = JSON.parse(e.parameter.payload || '{}');
     return json_({ ok:true, movimiento:addMovimiento_(payload) });
+  }
+
+  if (action === 'add_income') {
+    const monto = Number(String(e.parameter.monto || '0').replace(/[^0-9]/g,''));
+    if (!monto || monto <= 0) return json_({ ok:false, error:'Monto inválido' });
+    const ingreso = addIngreso_({
+      fecha:e.parameter.fecha || new Date(),
+      tipo:String(e.parameter.tipo || 'SUELDO').toUpperCase(),
+      descripcion:String(e.parameter.descripcion || 'Sueldo').trim(),
+      monto,
+      moneda:'CLP',
+      fuente:'MANUAL',
+      periodo:String(e.parameter.periodo || '').trim(),
+      estado:'CONFIRMADO'
+    });
+    return json_({ ok:true, ingreso });
   }
 
   if (action === 'update') {
@@ -109,6 +130,18 @@ function listMovimientos_(limit) {
   }));
 }
 
+function listIngresos_(limit) {
+  const sh=ss_().getSheetByName(SHEET_INGRESOS);
+  if(!sh || sh.getLastRow()<2) return [];
+  const last=sh.getLastRow();
+  limit=Math.max(1,Math.min(Number(limit||100),500));
+  const start=Math.max(2,last-limit+1);
+  return sh.getRange(start,1,last-start+1,10).getValues().reverse().map(r=>({
+    id:r[0],fecha:r[1],tipo:r[2],descripcion:r[3],monto:r[4],moneda:r[5],
+    fuente:r[6],mensajeId:r[7],periodo:r[8],estado:r[9]
+  }));
+}
+
 function addMovimiento_(m) {
   const sh=ss_().getSheetByName(SHEET_MOVIMIENTOS);
   const fecha=m.fecha ? new Date(m.fecha) : new Date();
@@ -121,6 +154,27 @@ function addMovimiento_(m) {
   ];
   sh.appendRow(row);
   return {id,fecha:fecha.toISOString(),descripcion:row[3],comercio:row[4],monto:row[5],categoria:row[7],subcategoria:row[8],banco:row[9],cuenta:row[10],tipo:row[11],fuente:row[13],estado:row[15]};
+}
+
+function addIngreso_(m) {
+  const sh=ss_().getSheetByName(SHEET_INGRESOS);
+  if(!sh) throw new Error('Falta hoja INGRESOS');
+  const fecha=m.fecha ? new Date(m.fecha) : new Date();
+  const id=m.id || Utilities.getUuid();
+  const periodo=m.periodo || Utilities.formatDate(fecha,'America/Santiago','yyyy-MM');
+  const row=[
+    id,fecha,m.tipo||'SUELDO',m.descripcion||'Sueldo',Number(m.monto||0),m.moneda||'CLP',
+    m.fuente||'MANUAL',m.mensajeId||'',periodo,m.estado||'CONFIRMADO'
+  ];
+  sh.appendRow(row);
+  return {id,fecha:fecha.toISOString(),tipo:row[2],descripcion:row[3],monto:row[4],moneda:row[5],fuente:row[6],periodo:row[8],estado:row[9]};
+}
+
+function existeIngresoMensaje_(messageId) {
+  if(!messageId) return false;
+  const sh=ss_().getSheetByName(SHEET_INGRESOS);
+  if(!sh || sh.getLastRow()<2) return false;
+  return sh.getRange(2,8,sh.getLastRow()-1,1).createTextFinder(messageId).matchEntireCell(true).findNext() !== null;
 }
 
 function actualizarMovimiento_(id, patch) {
@@ -150,7 +204,6 @@ function guardarRegla_(patron, campo, categoria, subcategoria, banco) {
   const p=String(patron||'').trim();
   if(!p) return;
 
-  // No aprender descriptores genéricos de agregadores, porque pueden representar comercios distintos.
   const generico = /^(?:merpago\*?comerci|mercado\s*pago|webpay|transbank|sumup)$/i.test(p.replace(/\s+/g,' ').trim());
   if(generico) return;
 
