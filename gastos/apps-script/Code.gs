@@ -392,3 +392,42 @@ function autorizarDrive() {
     archivo.setTrashed(true);
   }
 }
+
+
+function reintentarSueldo() {
+  const query = 'from:remuneraciones@info.carabineros.cl newer_than:90d';
+  const threads = GmailApp.search(query, 0, 10);
+  const props = PropertiesService.getScriptProperties();
+
+  for (const thread of threads) {
+    for (const msg of thread.getMessages().slice().reverse()) {
+      if (!esCorreoRemuneraciones_(msg)) continue;
+      const id = msg.getId();
+      if (existeIngresoMensaje_(id)) {
+        console.log('YA_REGISTRADO');
+        return 'YA_REGISTRADO';
+      }
+
+      const key = 'SALARY_PENDING_' + id;
+      const raw = props.getProperty(key);
+      if (raw) {
+        let previous = {};
+        try { previous = JSON.parse(raw); } catch (_err) {}
+        if (previous.timestamp && Date.now() - Number(previous.timestamp) < 60 * 1000) {
+          console.log('ESPERAR_UN_MINUTO');
+          return 'ESPERAR_UN_MINUTO';
+        }
+        if (previous.fileId) limpiarArchivoSueldoTemporal_(previous.fileId);
+        props.deleteProperty(key);
+      }
+
+      const result = procesarCorreoSueldo_(msg);
+      const state = result.dispatched ? 'ENVIADO_A_GITHUB' : (result.error || 'PENDIENTE');
+      console.log(state);
+      return state;
+    }
+  }
+
+  console.log('NO_ENCONTRADO');
+  return 'NO_ENCONTRADO';
+}
