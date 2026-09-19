@@ -22,22 +22,34 @@
       Falta configurar la URL del Web App de Google Apps Script en <code>app.js</code>.
     </section>
 
+    <section id="salaryNotice" class="notice hidden">
+      Aún no hay un sueldo registrado para este mes. Puedes registrarlo manualmente o dejar que llegue desde la liquidación de Remuneraciones.
+    </section>
+
     <section class="summary">
       <article>
-        <span>Gastado este mes</span>
+        <span>Ingresos del mes</span>
+        <strong id="monthIncome">$0</strong>
+      </article>
+      <article>
+        <span>Gastado del sueldo</span>
         <strong id="monthTotal">$0</strong>
+      </article>
+      <article>
+        <span>Disponible</span>
+        <strong id="availableTotal">$0</strong>
+      </article>
+      <article>
+        <span>Sueldo consumido</span>
+        <strong id="spentPercent">—</strong>
       </article>
       <article>
         <span>Gastado hoy</span>
         <strong id="todayTotal">$0</strong>
       </article>
       <article>
-        <span>Promedio diario</span>
-        <strong id="dailyAverage">$0</strong>
-      </article>
-      <article>
-        <span>Movimientos del mes</span>
-        <strong id="monthCount">0</strong>
+        <span>Disponible por día</span>
+        <strong id="dailyAvailable">—</strong>
       </article>
     </section>
 
@@ -64,12 +76,8 @@
 
       <div class="filters">
         <input id="searchInput" type="search" placeholder="Buscar comercio, banco o descripción">
-        <select id="categoryFilter">
-          <option value="">Todas las categorías</option>
-        </select>
-        <select id="bankFilter">
-          <option value="">Todos los bancos</option>
-        </select>
+        <select id="categoryFilter"><option value="">Todas las categorías</option></select>
+        <select id="bankFilter"><option value="">Todos los bancos</option></select>
         <select id="typeFilter">
           <option value="">Todos los tipos</option>
           <option value="COMPRA">Compras</option>
@@ -84,6 +92,19 @@
         <p class="empty">Aún no hay movimientos.</p>
       </div>
     </section>
+
+    <details class="card">
+      <summary>Registrar ingreso o sueldo manualmente</summary>
+      <form id="incomeForm" class="form">
+        <input id="incomeDescription" required value="Sueldo" placeholder="Descripción">
+        <input id="incomeAmount" required type="number" min="1" step="1" placeholder="Monto líquido">
+        <select id="incomeType">
+          <option value="SUELDO">Sueldo</option>
+          <option value="OTRO">Otro ingreso</option>
+        </select>
+        <button class="primary" type="submit">Guardar ingreso</button>
+      </form>
+    </details>
 
     <details class="card">
       <summary>Agregar gasto manual</summary>
