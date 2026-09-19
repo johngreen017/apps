@@ -245,24 +245,84 @@ function renderMovements(){
   }
 
   box.innerHTML=rows.slice(0,100).map(r=>`
-    <div class="movement" data-id="${escapeHtml(r.id)}" role="button" tabindex="0">
-      <div class="title">${escapeHtml(movementName(r))}</div>
-      <div class="amount">${money.format(Number(r.monto||0))}</div>
-      <div class="meta">
-        ${escapeHtml(movementCategory(r))}
-        ${r.banco ? " · "+escapeHtml(r.banco) : ""}
-        ${r.cuenta ? " · "+escapeHtml(r.cuenta) : ""}
-        · ${formatDate(r.fecha)}
-        <div><span class="badge">${escapeHtml(String(r.tipo||"GASTO"))}</span></div>
+    <div class="swipe-item" data-id="${escapeHtml(r.id)}">
+      <button type="button" class="swipe-delete" aria-label="Eliminar movimiento ${escapeHtml(movementName(r))}">Eliminar</button>
+      <div class="movement" role="button" tabindex="0" aria-label="${escapeHtml(movementName(r))}. Desliza a la izquierda para eliminar.">
+        <div class="title">${escapeHtml(movementName(r))}</div>
+        <div class="amount">${money.format(Number(r.monto||0))}</div>
+        <div class="meta">
+          ${escapeHtml(movementCategory(r))}
+          ${r.banco ? " · "+escapeHtml(r.banco) : ""}
+          ${r.cuenta ? " · "+escapeHtml(r.cuenta) : ""}
+          · ${formatDate(r.fecha)}
+          <div><span class="badge">${escapeHtml(String(r.tipo||"GASTO"))}</span></div>
+        </div>
       </div>
     </div>
   `).join("");
 
-  box.querySelectorAll(".movement").forEach(el=>{
-    const open=()=>openEditor(el.dataset.id);
-    el.addEventListener("click",open);
-    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+  box.querySelectorAll(".swipe-item").forEach(item=>{
+    const row=item.querySelector(".movement");
+    const del=item.querySelector(".swipe-delete");
+    const id=item.dataset.id;
+    const close=()=>item.classList.remove("swipe-open");
+    let startX=0,startY=0,tracking=false,moved=false;
+    row.addEventListener("touchstart",event=>{
+      if(event.touches.length!==1)return;
+      startX=event.touches[0].clientX;
+      startY=event.touches[0].clientY;
+      moved=false;
+      tracking=true;
+    },{passive:true});
+    row.addEventListener("touchmove",event=>{
+      if(!tracking)return;
+      const dx=event.touches[0].clientX-startX;
+      const dy=event.touches[0].clientY-startY;
+      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy))moved=true;
+    },{passive:true});
+    row.addEventListener("touchend",event=>{
+      if(!tracking)return;
+      tracking=false;
+      const dx=event.changedTouches[0].clientX-startX;
+      const dy=event.changedTouches[0].clientY-startY;
+      if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){
+        box.querySelectorAll(".swipe-open").forEach(other=>{if(other!==item)other.classList.remove("swipe-open");});
+        if(dx<0)item.classList.add("swipe-open");
+        else close();
+        moved=true;
+      }
+    },{passive:true});
+    row.addEventListener("touchcancel",()=>{tracking=false;});
+    row.addEventListener("click",()=>{
+      if(moved){moved=false;return;}
+      if(item.classList.contains("swipe-open")){close();return;}
+      openEditor(id);
+    });
+    row.addEventListener("keydown",event=>{
+      if(event.key==="Enter"||event.key===" "){event.preventDefault();openEditor(id);}
+      if(event.key==="ArrowLeft"){event.preventDefault();item.classList.add("swipe-open");del.focus();}
+      if(event.key==="ArrowRight"||event.key==="Escape"){event.preventDefault();close();}
+    });
+    del.addEventListener("click",()=>eliminarMovimiento(id,item,del));
   });
+}
+
+async function eliminarMovimiento(id,item,button){
+  const movimiento=allRows.find(r=>String(r.id)===String(id));
+  if(!movimiento)return;
+  if(!window.confirm("¿Eliminar "+movementName(movimiento)+" por "+money.format(Number(movimiento.monto||0))+"?\\n\\nSe quitará de tus gastos y totales."))return;
+  button.disabled=true;
+  button.textContent="Eliminando…";
+  try{
+    await api({}, {method:"POST",body:new URLSearchParams({action:"delete",id})});
+    allRows=allRows.filter(r=>String(r.id)!==String(id));
+    render();
+    await refresh();
+  }catch(err){
+    button.disabled=false;
+    button.textContent="Eliminar";
+    window.alert("No se pudo eliminar: "+err.message);
+  }
 }
 
 function render(){
