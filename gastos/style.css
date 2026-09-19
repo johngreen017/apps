@@ -48,17 +48,16 @@ h2{margin:0;font-size:clamp(20px,3vw,25px);font-weight:780;letter-spacing:-.03em
 input::placeholder{color:#9696a0}
 select option{background:#242429;color:white}
 .movement{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 13px;padding:16px 3px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .16s}
-.swipe-item{position:relative;overflow:hidden;border-bottom:1px solid var(--line);border-radius:11px}
+.swipe-item{position:relative;overflow:hidden;border-bottom:1px solid var(--line);border-radius:13px;isolation:isolate}
 .swipe-item:last-child{border-bottom:0}
-.swipe-item .movement{position:relative;z-index:1;border-bottom:0;background:var(--surface);touch-action:pan-y;transition:transform .2s ease;user-select:none;-webkit-user-select:none}
-.swipe-item.swipe-open .movement{transform:translateX(-112px)}
-.swipe-delete{position:absolute;inset:0 0 0 auto;width:112px;border:0;border-radius:0 10px 10px 0;background:#b91c2e;color:#fff;font-weight:750;font-size:14px}
-.movement-actions{display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap}
-.movement-actions .badge{margin-top:0}
-.inline-delete{border:1px solid rgba(255,120,120,.6);background:rgba(188,28,46,.17);color:#ff9ca4;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:750;min-height:30px}
-.inline-delete:disabled{opacity:.6}
+.swipe-item .movement{position:relative;z-index:1;border-bottom:0;background:var(--surface);touch-action:pan-y;transition:transform .3s cubic-bezier(.2,.8,.2,1);will-change:transform;-webkit-tap-highlight-color:transparent}
+.swipe-item.swipe-dragging .movement{transition:none}
+.swipe-item.swipe-open .movement{transform:translate3d(-112px,0,0)}
+.swipe-delete{position:absolute;inset:0 0 0 auto;display:flex;align-items:center;justify-content:center;width:112px;border:0;border-radius:0 12px 12px 0;background:#d72e42;color:#fff;font-weight:750;font-size:14px;letter-spacing:-.01em}
+.swipe-delete:active{background:#b91c2e}
 .swipe-delete:disabled{opacity:.65}
 .swipe-delete:focus-visible{outline:2px solid #fff;outline-offset:-4px}
+@media(prefers-reduced-motion:reduce){.swipe-item .movement{transition:none}}
 .movement:last-child{border-bottom:0}
 .movement:hover{background:rgba(255,255,255,.035)}
 .movement .title{font-size:15px;font-weight:700;overflow-wrap:anywhere}
