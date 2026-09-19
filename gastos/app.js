@@ -9,6 +9,7 @@ const categories = [
 
 let allRows = [];
 let allIncomes = [];
+let allStatements = [];
 
 function apiReady(){
   const ok = /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(GAS_URL);
@@ -416,6 +417,7 @@ function render(){
   renderCategoryBars();
   renderBankFilter();
   renderMovements();
+  renderStatements();
   $("lastUpdate").textContent="Actualizado "+new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
 }
 
@@ -445,6 +447,7 @@ async function refresh(){
     const data=await api({action:"list",limit:"500",incomeLimit:"100"});
     allRows=data.movimientos||[];
     allIncomes=data.ingresos||[];
+    allStatements=data.estadosCuenta||[];
     render();
   }finally{
     $("refreshBtn").disabled=false;
@@ -618,6 +621,133 @@ document.querySelectorAll(".bottom-nav .nav-item").forEach(link=>{
   link.addEventListener("click",()=>{
     document.querySelectorAll(".bottom-nav .nav-item").forEach(item=>item.classList.toggle("active",item===link));
   });
+});
+
+
+// Los PDF se analizan solamente en el navegador. No se envían sus bytes ni su
+// contraseña a Apps Script. El usuario verifica los datos antes de guardarlos.
+let pdfReaderPromise=null;
+function loadPdfReader(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(!pdfReaderPromise){
+    pdfReaderPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      script.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.crossOrigin="anonymous";
+      script.onload=()=>{
+        if(!window.pdfjsLib){reject(new Error("No se pudo cargar el lector de PDF"));return;}
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      };
+      script.onerror=()=>reject(new Error("No se pudo cargar el lector de PDF. Puedes ingresar el total y el vencimiento manualmente."));
+      document.head.appendChild(script);
+    }).catch(error=>{pdfReaderPromise=null;throw error;});
+  }
+  return pdfReaderPromise;
+}
+function parseStatementPreview(text){
+  const normalize=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+  const lines=String(text||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const values=new Set(),dates=new Set();
+  const months={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,
+    julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+  const label=/\b(?:monto\s+total\s+a\s+pagar|total\s+(?:facturado|a\s+pagar)|pago\s+total)\b/;
+  const amount=/(?:CLP\s*|\$\s*)([1-9]\d{0,2}(?:\.\d{3})+|[1-9]\d{3,})(?![\d.,])/gi;
+  for(let i=0;i<lines.length;i++){
+    const line=normalize(lines[i]);
+    const next=normalize(lines[i+1]||"");
+    if(label.test(line)&&!/minim|dolar|usd|\buf\b|anterior|cuotas futuras|cupo/.test(line)){
+      const after=line.replace(label,"");
+      const found=[...(after.matchAll(amount))];
+      const foundNext=found.length ? found : [...(next.matchAll(amount))];
+      if(foundNext.length===1)values.add(Number(foundNext[0][1].replace(/\./g,"")));
+    }
+    if(/fecha\s+de\s+vencimiento|vencimiento|vence\s+el|fecha\s+limite\s+de\s+pago/.test(line)&&!/vencimiento\s+anterior/.test(line)){
+      const context=line+" "+next;
+      for(const m of context.matchAll(/\b([0-3]?\d)[/-]([01]?\d)[/-](20\d{2})\b/g)){
+        const d=new Date(Date.UTC(Number(m[3]),Number(m[2])-1,Number(m[1])));
+        if(d.getUTCDate()===Number(m[1])&&d.getUTCMonth()===Number(m[2])-1)dates.add(d.toISOString().slice(0,10));
+      }
+      for(const m of context.matchAll(/\b([0-3]?\d)\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?(20\d{2})\b/g)){
+        const d=new Date(Date.UTC(Number(m[3]),months[m[2]]-1,Number(m[1])));
+        if(d.getUTCDate()===Number(m[1])&&d.getUTCMonth()===months[m[2]]-1)dates.add(d.toISOString().slice(0,10));
+      }
+    }
+  }
+  return {monto:values.size===1?[...values][0]:null,vencimiento:dates.size===1?[...dates][0]:null};
+}
+function renderStatements(){
+  const box=$("statementList");
+  if(!box)return;
+  const rows=allStatements.filter(r=>r.estado==="PENDIENTE");
+  box.innerHTML=rows.length?rows.map(r=>`
+    <div class="statement-item">
+      <div><strong>${escapeHtml(r.banco)}</strong><p class="subtle">Vence: ${escapeHtml(r.vencimiento)} · Pendiente de pago</p></div>
+      <strong>${money.format(Number(r.saldoPendienteCLP||0))}</strong>
+    </div>`).join(""):'<p class="subtle">No hay estados de cuenta pendientes registrados.</p>';
+}
+$("statementPdf").addEventListener("change",async event=>{
+  const file=event.target.files&&event.target.files[0];
+  if(!file)return;
+  const status=$("statementStatus"),password=$("statementPdfPassword").value;
+  status.textContent="Leyendo PDF en este dispositivo…";
+  $("statementAmount").value="";
+  $("statementDue").value="";
+  if(file.size>8*1024*1024){status.textContent="El archivo supera 8 MB.";return;}
+  if(file.type && file.type!=="application/pdf"&&!/\.pdf$/i.test(file.name)){status.textContent="Selecciona un archivo PDF.";return;}
+  try{
+    const pdfjs=await loadPdfReader();
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    const openPdf=async pwd=>{
+      const task=pdfjs.getDocument({data:bytes.slice(),password:pwd||undefined});
+      return task.promise;
+    };
+    let pdf;
+    try{pdf=await openPdf(password);}catch(err){
+      if(err&&err.name==="PasswordException"){
+        const entered=window.prompt("Contraseña del PDF (solo se utiliza en este dispositivo):");
+        if(!entered)throw new Error("No se ingresó la contraseña del PDF.");
+        pdf=await openPdf(entered);
+      }else throw err;
+    }
+    if(pdf.numPages>25)throw new Error("PDF demasiado largo para esta lectura.");
+    const lines=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const content=await page.getTextContent();
+      // Text items may be separate columns. Each piece stays on its own line;
+      // do not assume a monetary total is in the first number on a page.
+      for(const item of content.items){if(item.str&&item.str.trim())lines.push(item.str.trim());}
+    }
+    const parsed=parseStatementPreview(lines.join("\n"));
+    if(parsed.monto)$("statementAmount").value=String(parsed.monto);
+    if(parsed.vencimiento)$("statementDue").value=parsed.vencimiento;
+    status.textContent=parsed.monto&&parsed.vencimiento ?
+      "Se encontraron un total y un vencimiento. Compáralos con el PDF antes de guardar." :
+      "No se pudieron reconocer ambos datos con seguridad. Escribe el total a pagar y el vencimiento consultando el PDF.";
+  }catch(error){
+    status.textContent="No se pudo leer automáticamente: "+(error.message||"PDF no compatible")+
+      " Puedes completar el total y el vencimiento manualmente.";
+  }finally{$("statementPdfPassword").value="";}
+});
+$("statementForm").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const banco=$("statementBank").value,monto=$("statementAmount").value,vencimiento=$("statementDue").value;
+  if(!banco||!/^\d+$/.test(monto)||Number(monto)<=0||!/^20\d{2}-\d{2}-\d{2}$/.test(vencimiento)){
+    $("statementStatus").textContent="Revisa banco, total CLP y vencimiento.";return;
+  }
+  if(!window.confirm("¿Guardar estado de cuenta de "+banco+" por "+money.format(Number(monto))+
+    " con vencimiento "+vencimiento+" como PENDIENTE? Comprueba los datos con tu PDF."))return;
+  const button=$("statementSave");
+  button.disabled=true;$("statementStatus").textContent="Guardando estado de cuenta…";
+  try{
+    await api({}, {method:"POST",body:new URLSearchParams({action:"add_statement_manual",banco,monto,vencimiento})});
+    $("statementForm").reset();
+    $("statementStatus").textContent="Estado de cuenta guardado como pendiente. No se sumó como gasto adicional.";
+    await refresh();
+  }catch(error){
+    $("statementStatus").textContent="No se pudo guardar: "+error.message;
+  }finally{button.disabled=false;}
 });
 
 populateCategorySelects();
