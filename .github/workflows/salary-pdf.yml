@@ -83,7 +83,7 @@ jobs:
           PERIODO: ${{ github.event.client_payload.periodo }}
         run: |
           MONTO="$(cat monto.txt)"
-          curl --fail --location --silent --show-error             --request POST             --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=ok"             --data-urlencode "monto=$MONTO"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             --data-urlencode "fecha=$FECHA_ISO"             --data-urlencode "periodo=$PERIODO"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null
+          curl --fail --location --silent --show-error                         --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=ok"             --data-urlencode "monto=$MONTO"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             --data-urlencode "fecha=$FECHA_ISO"             --data-urlencode "periodo=$PERIODO"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null
 
       - name: Limpiar archivo si falla el procesamiento
         if: ${{ github.event_name == 'repository_dispatch' && failure() }}
@@ -92,7 +92,7 @@ jobs:
           FILE_ID: ${{ github.event.client_payload.file_id }}
           MESSAGE_ID: ${{ github.event.client_payload.message_id }}
         run: |
-          curl --location --silent --show-error             --request POST             --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=error"             --data-urlencode "error=No se pudo procesar la liquidación"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null || true
+          curl --location --silent --show-error                         --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=error"             --data-urlencode "error=No se pudo procesar la liquidación"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null || true
 
       - name: Borrar archivos locales
         if: always()
