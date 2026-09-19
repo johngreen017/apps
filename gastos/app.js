@@ -255,7 +255,7 @@ function renderMovements(){
           ${r.banco ? " · "+escapeHtml(r.banco) : ""}
           ${r.cuenta ? " · "+escapeHtml(r.cuenta) : ""}
           · ${formatDate(r.fecha)}
-          <div><span class="badge">${escapeHtml(String(r.tipo||"GASTO"))}</span></div>
+          <div class="movement-actions"><span class="badge">${escapeHtml(String(r.tipo||"GASTO"))}</span><button type="button" class="inline-delete" aria-label="Eliminar ${escapeHtml(movementName(r))}">Eliminar</button></div>
         </div>
       </div>
     </div>
@@ -264,7 +264,12 @@ function renderMovements(){
   box.querySelectorAll(".swipe-item").forEach(item=>{
     const row=item.querySelector(".movement");
     const del=item.querySelector(".swipe-delete");
+    const inlineDel=item.querySelector(".inline-delete");
     const id=item.dataset.id;
+    inlineDel.addEventListener("click",event=>{
+      event.stopPropagation();
+      eliminarMovimiento(id,item,inlineDel);
+    });
     const close=()=>item.classList.remove("swipe-open");
     let startX=0,startY=0,tracking=false,moved=false;
     row.addEventListener("touchstart",event=>{
