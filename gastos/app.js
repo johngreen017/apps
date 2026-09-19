@@ -208,7 +208,7 @@ function renderPendingSalaries(){
     <div class="salary-review" data-id="${escapeHtml(r.id)}">
       <p class="eyebrow">SUELDO POR CONFIRMAR</p>
       <h2>${money.format(Number(r.monto||0))}</h2>
-      <p class="subtle">Liquidación de ${escapeHtml(String(r.periodo||"").replace(/^(\\d{4})-(\\d{2})$/,"$2/$1"))}. Este monto no se incluirá en tu saldo disponible hasta que lo confirmes.</p>
+      <p class="subtle">Liquidación de ${escapeHtml(String(r.periodo||"").replace(/^(\d{4})-(\d{2})$/,"$2/$1"))}. Este monto no se incluirá en tu saldo disponible hasta que lo confirmes.</p>
       <div class="salary-review-actions">
         <button type="button" class="primary confirm-salary">Confirmar sueldo</button>
         <button type="button" class="ghost discard-salary">No corresponde</button>
