@@ -8,6 +8,7 @@ const categories = [
 ];
 
 let allRows = [];
+let allIncomes = [];
 
 function apiReady(){
   const ok = /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(GAS_URL);
@@ -86,6 +87,10 @@ function validRows(){
   return allRows.filter(r=>String(r.estado||"").toUpperCase()!=="DESCARTADO");
 }
 
+function validIncomes(){
+  return allIncomes.filter(r=>String(r.estado||"").toUpperCase()!=="DESCARTADO");
+}
+
 function filteredRows(){
   const q=$("searchInput").value.trim().toLowerCase();
   const category=$("categoryFilter").value;
@@ -103,21 +108,36 @@ function filteredRows(){
 
 function renderSummary(){
   const rows=validRows();
+  const incomes=validIncomes();
   const now=new Date();
+
   const monthExpenses=rows.filter(r=>{
     const d=new Date(r.fecha);
     return !isNaN(d) && sameMonth(d,now) && isExpense(r);
   });
+
+  const monthIncomes=incomes.filter(r=>{
+    const d=new Date(r.fecha);
+    return !isNaN(d) && sameMonth(d,now);
+  });
+
   const todayExpenses=monthExpenses.filter(r=>sameDay(new Date(r.fecha),now));
 
   const monthTotal=monthExpenses.reduce((a,r)=>a+Number(r.monto||0),0);
+  const incomeTotal=monthIncomes.reduce((a,r)=>a+Number(r.monto||0),0);
   const todayTotal=todayExpenses.reduce((a,r)=>a+Number(r.monto||0),0);
-  const dayOfMonth=Math.max(1,now.getDate());
+  const available=incomeTotal-monthTotal;
+  const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const daysRemaining=Math.max(1,lastDay-now.getDate()+1);
+  const dailyAvailable=available/daysRemaining;
 
+  $("monthIncome").textContent=money.format(incomeTotal);
   $("monthTotal").textContent=money.format(monthTotal);
+  $("availableTotal").textContent=money.format(available);
+  $("spentPercent").textContent=incomeTotal>0 ? Math.round((monthTotal/incomeTotal)*100)+"%" : "—";
   $("todayTotal").textContent=money.format(todayTotal);
-  $("dailyAverage").textContent=money.format(monthTotal/dayOfMonth);
-  $("monthCount").textContent=monthExpenses.length;
+  $("dailyAvailable").textContent=incomeTotal>0 ? money.format(dailyAvailable) : "—";
+  $("salaryNotice").classList.toggle("hidden", incomeTotal>0);
 }
 
 function renderCategoryBars(){
@@ -219,8 +239,9 @@ async function refresh(){
   if(!apiReady()) return;
   $("refreshBtn").disabled=true;
   try{
-    const data=await api({action:"list",limit:"500"});
+    const data=await api({action:"list",limit:"500",incomeLimit:"100"});
     allRows=data.movimientos||[];
+    allIncomes=data.ingresos||[];
     render();
   }finally{
     $("refreshBtn").disabled=false;
@@ -232,8 +253,11 @@ async function sync(){
   $("syncBtn").disabled=true;
   $("syncBtn").textContent="Sincronizando…";
   try{
-    await api({action:"sync"});
+    const result=await api({action:"sync"});
     await refresh();
+    if(result.sueldosPendientes>0 && result.sueldosAgregados===0){
+      console.info("Hay liquidaciones pendientes de procesamiento.");
+    }
   }catch(err){
     alert("No se pudo sincronizar: "+err.message);
   }finally{
@@ -284,6 +308,25 @@ $("editForm").addEventListener("submit",async e=>{
     $("editStatus").textContent="Error: "+err.message;
   }finally{
     $("saveEdit").disabled=false;
+  }
+});
+
+$("incomeForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const body=new URLSearchParams({
+    action:"add_income",
+    descripcion:$("incomeDescription").value.trim() || "Sueldo",
+    monto:String(Number($("incomeAmount").value||0)),
+    tipo:$("incomeType").value
+  });
+  try{
+    await api({}, {method:"POST",body});
+    e.target.reset();
+    $("incomeDescription").value="Sueldo";
+    $("incomeType").value="SUELDO";
+    await refresh();
+  }catch(err){
+    alert("No se pudo guardar el ingreso: "+err.message);
   }
 });
 
