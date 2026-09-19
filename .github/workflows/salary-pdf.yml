@@ -82,9 +82,31 @@ jobs:
           FECHA_ISO: ${{ github.event.client_payload.fecha_iso }}
           PERIODO: ${{ github.event.client_payload.periodo }}
         run: |
+          set -euo pipefail
           MONTO="$(cat monto.txt)"
-          curl --fail --location --silent --show-error                         --data-urlencode "action=salary_callback"             --data-urlencode "token=$CALLBACK_TOKEN"             --data-urlencode "status=ok"             --data-urlencode "monto=$MONTO"             --data-urlencode "file_id=$FILE_ID"             --data-urlencode "message_id=$MESSAGE_ID"             --data-urlencode "fecha=$FECHA_ISO"             --data-urlencode "periodo=$PERIODO"             "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec"             >/dev/null
-
+          # Apps Script redirects its POST response to googleusercontent.com.
+          # Let curl choose POST from --data-urlencode, then follow the redirect as GET.
+          curl --fail --location --silent --show-error --retry 2 \
+            --data-urlencode "action=salary_callback" \
+            --data-urlencode "token=$CALLBACK_TOKEN" \
+            --data-urlencode "status=ok" \
+            --data-urlencode "monto=$MONTO" \
+            --data-urlencode "file_id=$FILE_ID" \
+            --data-urlencode "message_id=$MESSAGE_ID" \
+            --data-urlencode "fecha=$FECHA_ISO" \
+            --data-urlencode "periodo=$PERIODO" \
+            "https://script.google.com/macros/s/AKfycbx1FyxYYdoiC43fOPc1zBuuM0YYHU-bJx4_XmnWDZKi9aRMa0xK0RAkqb7o8ckAHb2L7g/exec" \
+            --output callback-response.json
+          python3 - <<'PY'
+          import json, pathlib, sys
+          try:
+              response = json.loads(pathlib.Path('callback-response.json').read_text())
+          except (ValueError, OSError):
+              sys.exit('El callback devolvió una respuesta que no es JSON válido')
+          if response.get('ok') is not True:
+              sys.exit('Apps Script no confirmó el registro del sueldo')
+          print('Callback confirmado por Apps Script (registro nuevo o duplicado existente)')
+          PY
       - name: Limpiar archivo si falla el procesamiento
         if: ${{ github.event_name == 'repository_dispatch' && failure() }}
         env:
@@ -96,4 +118,4 @@ jobs:
 
       - name: Borrar archivos locales
         if: always()
-        run: rm -f liquidacion.pdf liquidacion-abierta.pdf liquidacion.txt monto.txt
+        run: rm -f liquidacion.pdf liquidacion-abierta.pdf liquidacion.txt monto.txt callback-response.json
