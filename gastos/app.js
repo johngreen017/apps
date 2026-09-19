@@ -145,7 +145,7 @@ function validRows(){
 }
 
 function validIncomes(){
-  return allIncomes.filter(r=>String(r.estado||"").toUpperCase()!=="DESCARTADO");
+  return allIncomes.filter(r=>String(r.estado||"").toUpperCase()==="CONFIRMADO");
 }
 
 function filteredRows(){
@@ -194,7 +194,53 @@ function renderSummary(){
   $("spentPercent").textContent=incomeTotal>0 ? Math.round((monthTotal/incomeTotal)*100)+"%" : "—";
   $("todayTotal").textContent=money.format(todayTotal);
   $("dailyAvailable").textContent=incomeTotal>0 ? money.format(dailyAvailable) : "—";
-  $("salaryNotice").classList.toggle("hidden", incomeTotal>0);
+  $("salaryNotice").classList.toggle("hidden", incomeTotal>0 || allIncomes.some(r=>String(r.estado||"").toUpperCase()==="PENDIENTE" && String(r.tipo||"").toUpperCase()==="SUELDO"));
+  renderPendingSalaries();
+}
+
+function renderPendingSalaries(){
+  const pending=allIncomes.filter(r=>String(r.estado||"").toUpperCase()==="PENDIENTE" &&
+    String(r.tipo||"").toUpperCase()==="SUELDO" && String(r.fuente||"")==="REMUNERACIONES_GMAIL");
+  const panel=$("pendingSalaryPanel");
+  if(!panel)return;
+  panel.classList.toggle("hidden",pending.length===0);
+  panel.innerHTML=pending.map(r=>`
+    <div class="salary-review" data-id="${escapeHtml(r.id)}">
+      <p class="eyebrow">SUELDO POR CONFIRMAR</p>
+      <h2>${money.format(Number(r.monto||0))}</h2>
+      <p class="subtle">Liquidación de ${escapeHtml(String(r.periodo||"").replace(/^(\\d{4})-(\\d{2})$/,"$2/$1"))}. Este monto no se incluirá en tu saldo disponible hasta que lo confirmes.</p>
+      <div class="salary-review-actions">
+        <button type="button" class="primary confirm-salary">Confirmar sueldo</button>
+        <button type="button" class="ghost discard-salary">No corresponde</button>
+      </div>
+      <p class="subtle salary-review-status" role="status" aria-live="polite"></p>
+    </div>
+  `).join("");
+  panel.querySelectorAll(".salary-review").forEach(item=>{
+    const id=item.dataset.id;
+    item.querySelector(".confirm-salary").addEventListener("click",()=>resolverSueldo(id,true,item));
+    item.querySelector(".discard-salary").addEventListener("click",()=>resolverSueldo(id,false,item));
+  });
+}
+
+async function resolverSueldo(id,confirmar,item){
+  const row=allIncomes.find(r=>String(r.id)===id);
+  if(!row)return;
+  const question=confirmar ?
+    "¿Confirmas que recibiste el sueldo de "+money.format(Number(row.monto||0))+" correspondiente a "+String(row.periodo||"")+"?" :
+    "¿Descartar esta liquidación? No se sumará como ingreso.";
+  if(!window.confirm(question))return;
+  const buttons=item.querySelectorAll("button");
+  buttons.forEach(button=>button.disabled=true);
+  const status=item.querySelector(".salary-review-status");
+  status.textContent="Guardando decisión…";
+  try{
+    await api({}, {method:"POST",body:new URLSearchParams({action:confirmar?"confirm_salary":"discard_salary",id})});
+    await refresh();
+  }catch(error){
+    buttons.forEach(button=>button.disabled=false);
+    status.textContent="No se pudo guardar: "+error.message;
+  }
 }
 
 function renderCategoryBars(){
