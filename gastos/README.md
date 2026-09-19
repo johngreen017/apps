@@ -1,23 +1,9 @@
-# Mis Gastos
+# Mis Gastos — interfaz pública
 
-Frontend en GitHub Pages + backend Google Apps Script + Google Sheets.
+Sitio: https://johngreen017.github.io/gastos/
 
-## Hoja
-Control de Gastos:
-https://docs.google.com/spreadsheets/d/1yOX3FL_KemWqDT9IBNcBLm3pC63U42-j4to-yC-0Hfk/edit
+Este directorio contiene únicamente los archivos que el navegador necesita para abrir la aplicación: HTML, CSS, JavaScript y recursos visuales.
 
-## Publicación
-1. Crear/abrir un proyecto de Google Apps Script.
-2. Copiar `apps-script/Code.gs` y `apps-script/Gmail.gs`.
-3. Implementar > Nueva implementación > Aplicación web.
-4. Ejecutar como: yo.
-5. Acceso: según el nivel de privacidad deseado.
-6. Copiar la URL que termina en `/exec` y pegarla en `app.js` como `GAS_URL`.
+El código del backend, las automatizaciones y la configuración de Google Apps Script se mantienen en el repositorio privado Mis-Gastos-. Los movimientos e ingresos requieren autenticación en el servicio de datos; publicar la interfaz no equivale a publicar acceso a la información financiera.
 
-## Funciones V0.1
-- Lectura de Gmail de los últimos 30 días.
-- Detección genérica de correos de compra/cargo/transferencia.
-- Deduplicación por Gmail Message ID.
-- Clasificación básica.
-- Alta manual de gastos.
-- Dashboard mensual simple.
+No subir aquí liquidaciones, hojas de cálculo, contraseñas, tokens, archivos de configuración de cuentas ni código del backend.
