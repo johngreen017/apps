@@ -1,12 +1,26 @@
 function syncGmail_() {
-  const query = 'newer_than:30d';
-  const threads = GmailApp.search(query,0,100);
+  const query = 'newer_than:45d';
+  const threads = GmailApp.search(query,0,150);
   let procesados=0, agregados=0, descartados=0;
+  let sueldosAgregados=0, sueldosPendientes=0;
 
   threads.forEach(thread=>{
     thread.getMessages().forEach(msg=>{
       procesados++;
       const id=msg.getId();
+
+      if(esCorreoRemuneraciones_(msg)){
+        if(existeIngresoMensaje_(id)) return;
+        const sueldo=procesarCorreoSueldo_(msg);
+        if(sueldo.ok && sueldo.ingreso){
+          addIngreso_(sueldo.ingreso);
+          sueldosAgregados++;
+        } else if(sueldo.pendiente){
+          sueldosPendientes++;
+        }
+        return;
+      }
+
       if(existeMensaje_(id)) return;
       const parsed=parseBankMail_(msg);
       if(!parsed){ descartados++; return; }
@@ -16,7 +30,106 @@ function syncGmail_() {
       agregados++;
     });
   });
-  return {ok:true,procesados,agregados,descartados};
+
+  return {
+    ok:true,
+    procesados,
+    agregados,
+    descartados,
+    sueldosAgregados,
+    sueldosPendientes
+  };
+}
+
+function esCorreoRemuneraciones_(msg){
+  const subject=String(msg.getSubject()||'');
+  const from=String(msg.getFrom()||'');
+  const body=stripHtml_(msg.getBody()||'');
+  const text=(subject+' '+from+' '+body).toLowerCase();
+
+  return (
+    /remuneraciones/i.test(from) &&
+    /liquidaci[oó]n\s+de\s+sueldo|departamento\s+remuneraciones\s+p\.?9|carabineros\s+de\s+chile/i.test(text)
+  ) || (
+    /liquidaci[oó]n\s+de\s+sueldo/i.test(subject) &&
+    /departamento\s+remuneraciones|carabineros\s+de\s+chile/i.test(text)
+  );
+}
+
+function procesarCorreoSueldo_(msg){
+  const attachments=msg.getAttachments({includeInlineImages:false,includeAttachments:true})
+    .filter(a=>/pdf/i.test(String(a.getContentType()||'')) || /\.pdf$/i.test(String(a.getName()||'')));
+
+  if(!attachments.length){
+    return {ok:false,pendiente:true,error:'Correo de remuneraciones sin PDF adjunto'};
+  }
+
+  const result=extraerSueldoPdf_(attachments[0]);
+  if(!result.ok){
+    return {
+      ok:false,
+      pendiente:true,
+      error:result.error || 'No se pudo leer la liquidación'
+    };
+  }
+
+  const fecha=msg.getDate();
+  const periodo=Utilities.formatDate(fecha,'America/Santiago','yyyy-MM');
+
+  return {
+    ok:true,
+    ingreso:{
+      fecha,
+      tipo:'SUELDO',
+      descripcion:'Sueldo Carabineros',
+      monto:Number(result.monto),
+      moneda:'CLP',
+      fuente:'REMUNERACIONES_GMAIL',
+      mensajeId:msg.getId(),
+      periodo,
+      estado:'CONFIRMADO'
+    }
+  };
+}
+
+function extraerSueldoPdf_(blob){
+  const props=PropertiesService.getScriptProperties();
+  const url=String(props.getProperty('SALARY_PDF_SERVICE_URL')||'').replace(/\/$/,'');
+  const token=String(props.getProperty('SALARY_PDF_SERVICE_TOKEN')||'');
+
+  if(!url || !token){
+    return {ok:false,error:'Servicio de liquidaciones no configurado'};
+  }
+
+  try{
+    const payload={
+      filename:blob.getName()||'liquidacion.pdf',
+      pdfBase64:Utilities.base64Encode(blob.getBytes())
+    };
+
+    const response=UrlFetchApp.fetch(url+'/extract-salary',{
+      method:'post',
+      contentType:'application/json',
+      headers:{Authorization:'Bearer '+token},
+      payload:JSON.stringify(payload),
+      muteHttpExceptions:true
+    });
+
+    const code=response.getResponseCode();
+    const raw=response.getContentText()||'{}';
+    let data={};
+    try{ data=JSON.parse(raw); }catch(_err){}
+
+    if(code<200 || code>=300 || !data.ok){
+      return {ok:false,error:data.error || ('Servicio respondió HTTP '+code)};
+    }
+
+    const monto=Number(data.monto||0);
+    if(!monto || monto<=0) return {ok:false,error:'Monto líquido inválido'};
+    return {ok:true,monto};
+  }catch(err){
+    return {ok:false,error:'No se pudo conectar al servicio de liquidaciones'};
+  }
 }
 
 function parseBankMail_(msg) {
