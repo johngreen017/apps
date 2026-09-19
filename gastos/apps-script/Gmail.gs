@@ -24,11 +24,8 @@ function parseBankMail_(msg) {
   const from=(msg.getFrom()||'').toLowerCase();
   const body=stripHtml_(msg.getBody()||'');
   const text=(subject+'\n'+body).replace(/\s+/g,' ').trim();
-  const s=subject.toLowerCase();
   const t=text.toLowerCase();
 
-  // Modo estricto: SOLO se aceptan correos cuyo asunto parece una transacción real.
-  // Se prioriza precisión sobre cobertura para evitar que ofertas entren como gastos.
   const subjectTransactionPatterns=[
     /comprobante\s+de\s+compra/i,
     /comprobante\s+de\s+pago/i,
@@ -49,7 +46,6 @@ function parseBankMail_(msg) {
 
   if(!subjectTransactionPatterns.some(p=>p.test(subject))) return null;
 
-  // Bloqueos explícitos para publicidad, cobranza y resúmenes.
   const rejectSubjectPatterns=[
     /oferta|promoci[oó]n|descuento|beneficio|dcto\.?|\boff\b|cashback/i,
     /cuotas?\s+sin\s+inter[eé]s/i,
@@ -68,11 +64,9 @@ function parseBankMail_(msg) {
   ];
   if(promoBodyWords.some(w=>t.includes(w))) return null;
 
-  // La transacción debe tener un monto explícito.
   const moneyMatches=[...text.matchAll(/(?:CLP\s*|\$\s*)([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{4,})/gi)];
   if(!moneyMatches.length) return null;
 
-  // El cuerpo además debe contener evidencia transaccional, no solo un precio.
   const bodyTransactionPatterns=[
     /se\s+(?:ha\s+)?realiz(?:ó|o)/i,
     /realizaste/i,
@@ -96,7 +90,6 @@ function parseBankMail_(msg) {
   const allowedNonBankReceipt = /comprobante\s+de\s+compra|tu\s+recibo\s+de\s+apple/i.test(subject);
   if(!banco && !allowedNonBankReceipt) return null;
 
-  // Elegir el monto más cercano a texto transaccional; si no, usar el primero.
   let monto=Number(moneyMatches[0][1].replace(/\./g,''));
   for(const m of moneyMatches){
     const start=Math.max(0,m.index-140);
@@ -109,11 +102,12 @@ function parseBankMail_(msg) {
   }
   if(!monto || monto<=0) return null;
 
-  const comercio=extraerComercio_(text);
+  const comercio=limpiarComercio_(extraerComercio_(text));
   const tipo=/transferencia|env[ií]o\s+o\s+recepci[oó]n\s+de\s+dinero/i.test(subject) ? 'TRANSFERENCIA' :
              (/giro|retiro/i.test(subject) ? 'GIRO' :
              (/pago|recibo de apple/i.test(subject) ? 'PAGO' : 'COMPRA'));
-  let categoria=clasificar_(comercio||subject);
+
+  let categoria=clasificarConReglas_({comercio:comercio||subject,descripcion:subject,banco});
   if(tipo==='TRANSFERENCIA') categoria='Transferencias';
   if(tipo==='GIRO') categoria='Efectivo';
   if(/recibo de apple/i.test(subject)) categoria='Suscripciones';
@@ -160,18 +154,73 @@ function extraerComercio_(text) {
   return '';
 }
 
+function limpiarComercio_(value) {
+  return String(value||'')
+    .replace(/\s+/g,' ')
+    .replace(/^[\s:;,-]+|[\s:;,-]+$/g,'')
+    .trim();
+}
+
+function clasificarConReglas_(datos) {
+  datos=datos||{};
+  const comercio=String(datos.comercio||'');
+  const descripcion=String(datos.descripcion||'');
+  const banco=String(datos.banco||'');
+
+  try{
+    const sh=ss_().getSheetByName(SHEET_REGLAS);
+    if(sh && sh.getLastRow()>=2){
+      const rows=sh.getRange(2,1,sh.getLastRow()-1,7).getValues()
+        .filter(r=>String(r[6]||'').trim().toLowerCase()!=='no' && String(r[0]||'').trim())
+        .sort((a,b)=>Number(b[5]||0)-Number(a[5]||0));
+
+      for(const r of rows){
+        const patron=normalizarTexto_(r[0]);
+        const campo=String(r[1]||'').trim().toLowerCase();
+        const categoria=String(r[2]||'').trim();
+        const bancoRegla=normalizarTexto_(r[4]);
+        if(!categoria || !patron) continue;
+        if(bancoRegla && !normalizarTexto_(banco).includes(bancoRegla)) continue;
+
+        let objetivo=comercio+' '+descripcion;
+        if(campo.includes('comercio')) objetivo=comercio;
+        else if(campo.includes('descripcion') || campo.includes('descripción')) objetivo=descripcion;
+        else if(campo.includes('banco')) objetivo=banco;
+
+        if(normalizarTexto_(objetivo).includes(patron)) return categoria;
+      }
+    }
+  } catch(err) {
+    console.log('No se pudieron leer reglas: '+err);
+  }
+
+  return clasificar_(comercio+' '+descripcion);
+}
+
+function normalizarTexto_(text) {
+  return String(text||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9*]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
 function clasificar_(text) {
-  const t=(text||'').toLowerCase();
+  const t=normalizarTexto_(text);
   const reglas=[
-    ['Combustible',['copec','shell','petrobras','aramco']],
-    ['Supermercado',['lider','jumbo','tottus','unimarc','santa isabel']],
-    ['Transporte',['uber','cabify','didi','metro']],
-    ['Alimentación',['restaurant','restaurante','mcdonald','burger','starbucks','pedidosya','rappi']],
-    ['Salud',['farmacia','cruz verde','salcobrand','ahumada','clinica','clínica']],
-    ['Ropa',['zara','h&m','falabella','ripley','paris']],
-    ['Suscripciones',['netflix','spotify','disney','youtube','icloud','apple.com/bill']]
+    ['Combustible',['copec','shell','aramco','petrobras','terpel']],
+    ['Supermercado',['lider','jumbo','tottus','unimarc','santa isabel','acuenta','alvi','mayorista 10']],
+    ['Transporte',['uber','cabify','didi','metro','red movilidad','turbus','pullman']],
+    ['Alimentación',['restaurant','restaurante','mcdonald','burger king','starbucks','pedidosya','rappi','kfc','subway','dominos','papa johns','juan valdez']],
+    ['Salud',['farmacia','cruz verde','salcobrand','ahumada','clinica','integramedica','redsalud','vidaintegra']],
+    ['Ropa',['zara','h&m','hm ','falabella','ripley','paris','nike','adidas']],
+    ['Suscripciones',['netflix','spotify','disney','youtube','icloud','apple.com/bill','google one','microsoft']],
+    ['Hogar',['sodimac','easy','ikea','casaideas']],
+    ['Servicios',['enel','aguas andinas','metrogas','entel','movistar','wom','claro','vtr','gtd']],
+    ['Educación',['colegio','universidad','instituto','matricula','matrícula']],
+    ['Otros',['mercado pago','merpago']]
   ];
-  for(const [cat,keys] of reglas) if(keys.some(k=>t.includes(k))) return cat;
+  for(const [cat,keys] of reglas) if(keys.some(k=>t.includes(normalizarTexto_(k)))) return cat;
   return 'Otros';
 }
 
