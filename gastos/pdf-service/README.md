@@ -1,33 +1,31 @@
-# Salary PDF Service
+# Despliegue del lector privado de liquidaciones
 
-Servicio privado para Mis Gastos. Su única función es abrir la liquidación de sueldo cifrada recibida por Gmail, extraer el monto líquido y devolver solo ese monto a Apps Script.
+Este servicio abre únicamente la liquidación de sueldo cifrada, extrae el monto líquido y devuelve solo ese monto a Apps Script.
 
-## Variables privadas
+## Despliegue desde Codespaces
 
-- `PDF_PASSWORD`: clave del PDF. Guardarla como secreto del runtime, nunca en GitHub.
-- `SERVICE_TOKEN`: token aleatorio compartido con Apps Script.
-- `PORT`: lo define Cloud Run.
+Desde la raíz del repositorio:
 
-## Endpoint
+```bash
+cd gastos/pdf-service
+chmod +x deploy-cloud-run.sh
+gcloud auth login
+./deploy-cloud-run.sh
+```
 
-`POST /extract-salary`
+El script:
+1. usa/solicita tu Google Cloud Project ID;
+2. habilita Cloud Run, Cloud Build, Secret Manager y Artifact Registry;
+3. pide la clave del PDF sin mostrarla;
+4. genera un token aleatorio;
+5. guarda ambos como secretos de Google Cloud;
+6. despliega el servicio en `southamerica-west1`;
+7. muestra al final dos valores para Apps Script:
+   - `SALARY_PDF_SERVICE_URL`
+   - `SALARY_PDF_SERVICE_TOKEN`
 
-Header:
-`Authorization: Bearer <SERVICE_TOKEN>`
+La clave del PDF nunca debe guardarse en GitHub ni pegarse en el chat.
 
-Body:
-`{"pdfBase64":"...","filename":"liquidacion.pdf"}`
+## Costos
 
-Respuesta:
-`{"ok":true,"monto":1234567,"moneda":"CLP"}`
-
-El servicio no persiste el PDF, no devuelve el texto completo y no registra la clave ni el contenido de la liquidación.
-
-## Despliegue recomendado
-
-Google Cloud Run con autenticación de aplicación mediante `SERVICE_TOKEN` y `PDF_PASSWORD` inyectada desde Secret Manager. Tras desplegar, configurar en Apps Script las propiedades:
-
-- `SALARY_PDF_SERVICE_URL`
-- `SALARY_PDF_SERVICE_TOKEN`
-
-La clave del PDF debe quedar solo en el secreto del servicio, no en Apps Script ni en este repositorio.
+Cloud Run queda con mínimo de 0 instancias y máximo de 2. Para el uso mensual de Mis Gastos el consumo esperado es muy bajo, pero Google Cloud puede exigir una cuenta de facturación activa.
