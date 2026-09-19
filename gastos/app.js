@@ -422,8 +422,8 @@ $("changeKeyForm").addEventListener("submit",async event=>{
     status.textContent="La confirmación no coincide con la nueva clave.";
     return;
   }
-  if(nueva.length<16||nueva.length>128||nueva.trim()!==nueva){
-    status.textContent="La nueva clave debe tener entre 16 y 128 caracteres, sin espacios al principio ni al final.";
+  if(nueva.length<8||nueva.length>128||nueva.trim()!==nueva){
+    status.textContent="La nueva clave debe tener entre 8 y 128 caracteres, sin espacios al principio ni al final.";
     return;
   }
   if(actual===nueva){
