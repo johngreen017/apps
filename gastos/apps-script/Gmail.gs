@@ -367,7 +367,7 @@ function stripHtml_(html){
 }
 
 function probarSueldoRapido_() {
-  const threads = GmailApp.search('newer_than:90d remuneraciones', 0, 20);
+  const threads = GmailApp.search('from:remuneraciones@info newer_than:90d', 0, 10);
   let revisados = 0;
 
   for (const thread of threads) {
