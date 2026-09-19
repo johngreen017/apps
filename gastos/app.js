@@ -16,18 +16,45 @@ function apiReady(){
   return ok;
 }
 
-// La clave solo se conserva en esta sesión, nunca en el repositorio.
-let accessKey = sessionStorage.getItem("mg_access_key") || "";
+// El acceso se recuerda solamente en los navegadores donde el propietario lo autorice.
+// Nunca se publica la clave en GitHub ni se agrega a la URL.
+const ACCESS_KEY_NAME="mg_access_key";
+const TRUSTED_KEY_NAME="mg_trusted_device_key";
+const REMEMBER_ASKED="mg_remember_asked";
+function leerGuardado(store,key){
+  try{return store.getItem(key)||"";}catch(_){return "";}
+}
+function borrarGuardado(store,key){
+  try{store.removeItem(key);}catch(_){}
+}
+function escribirGuardado(store,key,value){
+  try{store.setItem(key,value);return true;}catch(_){return false;}
+}
+let accessKey=leerGuardado(localStorage,TRUSTED_KEY_NAME) || leerGuardado(sessionStorage,ACCESS_KEY_NAME);
+let awaitingRemember=false;
 function pedirClavePrivada(){
-  const value = window.prompt("Clave privada de Mis Gastos (se guarda solo durante esta sesión):");
-  if(!value) return false;
+  const value=window.prompt("Ingresa la clave privada de Mis Gastos:");
+  if(!value || !value.trim()) return false;
   accessKey=value.trim();
-  sessionStorage.setItem("mg_access_key",accessKey);
+  escribirGuardado(sessionStorage,ACCESS_KEY_NAME,accessKey);
+  awaitingRemember=true;
   return true;
+}
+function ofrecerRecordarDispositivo(){
+  if(!accessKey || leerGuardado(localStorage,TRUSTED_KEY_NAME)) return;
+  // La confirmación solo se ofrece después de que Apps Script haya validado la clave.
+  if(!awaitingRemember && leerGuardado(sessionStorage,REMEMBER_ASKED)) return;
+  awaitingRemember=false;
+  escribirGuardado(sessionStorage,REMEMBER_ASKED,"1");
+  if(window.confirm("¿Recordar el acceso en este iPhone o iPad?\\n\\nSi aceptas, no te pediremos la clave al abrir Mis Gastos en este navegador. Elige Cancelar si compartes el dispositivo.")){
+    if(!escribirGuardado(localStorage,TRUSTED_KEY_NAME,accessKey)){
+      window.alert("Safari no permitió recordar la clave. Se pedirá al iniciar una sesión nueva.");
+    }
+  }
 }
 async function api(params={}, options={}){
   if(!apiReady()) throw new Error("Apps Script no configurado");
-  const post = async ()=>{
+  const post=async ()=>{
     const body=new URLSearchParams(options.body || "");
     Object.entries(params).forEach(([k,v])=>body.set(k,v));
     if(accessKey) body.set("access_key",accessKey);
@@ -38,11 +65,22 @@ async function api(params={}, options={}){
   let data=await post();
   if(data && data.ok===false && /acceso no autorizado/i.test(data.error||"")){
     accessKey="";
-    sessionStorage.removeItem("mg_access_key");
+    awaitingRemember=false;
+    borrarGuardado(localStorage,TRUSTED_KEY_NAME);
+    borrarGuardado(sessionStorage,ACCESS_KEY_NAME);
     if(!pedirClavePrivada()) throw new Error("Necesitas tu clave privada para consultar Mis Gastos.");
     data=await post();
   }
-  if(data && data.ok===false) throw new Error(data.error || "Error");
+  if(data && data.ok===false){
+    if(/acceso no autorizado/i.test(data.error||"")){
+      accessKey="";
+      awaitingRemember=false;
+      borrarGuardado(localStorage,TRUSTED_KEY_NAME);
+      borrarGuardado(sessionStorage,ACCESS_KEY_NAME);
+    }
+    throw new Error(data.error || "Error");
+  }
+  if(accessKey && !leerGuardado(localStorage,TRUSTED_KEY_NAME)) ofrecerRecordarDispositivo();
   return data;
 }
 
