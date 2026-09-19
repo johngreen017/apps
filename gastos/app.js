@@ -371,6 +371,21 @@ $("manualForm").addEventListener("submit",async e=>{
   }
 });
 
+// Navegación visual: todos los accesos apuntan a funciones existentes.
+function openNewExpense(){
+  const formCard=$("registrarGasto");
+  formCard.open=true;
+  formCard.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+  setTimeout(()=>{const field=$("description");if(field)field.focus({preventScroll:true});},350);
+}
+$("addExpenseBtn").addEventListener("click",openNewExpense);
+$("navAddExpense").addEventListener("click",()=>{ $("registrarGasto").open=true; });
+document.querySelectorAll(".bottom-nav .nav-item").forEach(link=>{
+  link.addEventListener("click",()=>{
+    document.querySelectorAll(".bottom-nav .nav-item").forEach(item=>item.classList.toggle("active",item===link));
+  });
+});
+
 populateCategorySelects();
 $("category").value="Otros";
 apiReady();
