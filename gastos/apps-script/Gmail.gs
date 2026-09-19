@@ -147,7 +147,7 @@ function enviarLiquidacionGithub_(blob,msg){
       try{ limpiarArchivoSueldoTemporal_(file.getId()); }catch(_err){}
     }
     props.deleteProperty('SALARY_PENDING_' + msg.getId());
-    return {ok:false,pendiente:true,error:'No se pudo enviar la liquidación a GitHub Actions'};
+    return {ok:false,pendiente:true,error:'No se pudo enviar la liquidación a GitHub Actions: ' + String(err && err.message ? err.message : err)};
   }
 }
 
