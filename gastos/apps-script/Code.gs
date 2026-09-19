@@ -380,3 +380,9 @@ function probarSincronizacionSueldo() {
   console.log(JSON.stringify(resultado));
   return resultado;
 }
+
+function autorizarDrive() {
+  const nombre = DriveApp.getRootFolder().getName();
+  console.log('Acceso a Drive autorizado: ' + nombre);
+  return nombre;
+}
