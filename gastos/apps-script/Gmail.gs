@@ -57,6 +57,23 @@ function esCorreoRemuneraciones_(msg){
 }
 
 function procesarCorreoSueldo_(msg){
+  limpiarArchivosSueldoTemporales_();
+
+  const props=PropertiesService.getScriptProperties();
+  const messageId=msg.getId();
+  const pendingKey='SALARY_PENDING_' + messageId;
+  const pendingRaw=props.getProperty(pendingKey);
+
+  if(pendingRaw){
+    try{
+      const pending=JSON.parse(pendingRaw);
+      if(pending.timestamp && Date.now()-Number(pending.timestamp) < 6*60*60*1000){
+        return {ok:false,pendiente:true,error:'Liquidación enviada a procesamiento'};
+      }
+    }catch(_err){}
+    props.deleteProperty(pendingKey);
+  }
+
   const attachments=msg.getAttachments({includeInlineImages:false,includeAttachments:true})
     .filter(a=>/pdf/i.test(String(a.getContentType()||'')) || /\.pdf$/i.test(String(a.getName()||'')));
 
@@ -64,71 +81,73 @@ function procesarCorreoSueldo_(msg){
     return {ok:false,pendiente:true,error:'Correo de remuneraciones sin PDF adjunto'};
   }
 
-  const result=extraerSueldoPdf_(attachments[0]);
-  if(!result.ok){
-    return {
-      ok:false,
-      pendiente:true,
-      error:result.error || 'No se pudo leer la liquidación'
-    };
-  }
-
-  const fecha=msg.getDate();
-  const periodo=Utilities.formatDate(fecha,'America/Santiago','yyyy-MM');
-
-  return {
-    ok:true,
-    ingreso:{
-      fecha,
-      tipo:'SUELDO',
-      descripcion:'Sueldo Carabineros',
-      monto:Number(result.monto),
-      moneda:'CLP',
-      fuente:'REMUNERACIONES_GMAIL',
-      mensajeId:msg.getId(),
-      periodo,
-      estado:'CONFIRMADO'
-    }
-  };
+  return enviarLiquidacionGithub_(attachments[0], msg);
 }
 
-function extraerSueldoPdf_(blob){
+function enviarLiquidacionGithub_(blob,msg){
   const props=PropertiesService.getScriptProperties();
-  const url=String(props.getProperty('SALARY_PDF_SERVICE_URL')||'').replace(/\/$/,'');
-  const token=String(props.getProperty('SALARY_PDF_SERVICE_TOKEN')||'');
+  const githubToken=String(props.getProperty('GITHUB_SALARY_TOKEN')||'');
+  const callbackToken=String(props.getProperty('SALARY_CALLBACK_TOKEN')||'');
 
-  if(!url || !token){
-    return {ok:false,error:'Servicio de liquidaciones no configurado'};
+  if(!githubToken || !callbackToken){
+    return {ok:false,pendiente:true,error:'Integración GitHub de liquidaciones no configurada'};
   }
 
+  let file=null;
   try{
+    const fecha=msg.getDate();
+    const periodo=Utilities.formatDate(fecha,'America/Santiago','yyyy-MM');
+    const safeName='mis-gastos-liquidacion-' + Utilities.getUuid() + '.pdf';
+
+    file=DriveApp.createFile(blob.copyBlob()).setName(safeName);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    const fileId=file.getId();
+    props.setProperty('SALARY_TEMP_' + fileId, String(Date.now()));
+    props.setProperty('SALARY_PENDING_' + msg.getId(), JSON.stringify({
+      timestamp:Date.now(),
+      fileId:fileId
+    }));
+
     const payload={
-      filename:blob.getName()||'liquidacion.pdf',
-      pdfBase64:Utilities.base64Encode(blob.getBytes())
+      event_type:'salary_pdf',
+      client_payload:{
+        file_id:fileId,
+        message_id:msg.getId(),
+        fecha_iso:fecha.toISOString(),
+        periodo:periodo
+      }
     };
 
-    const response=UrlFetchApp.fetch(url+'/extract-salary',{
-      method:'post',
-      contentType:'application/json',
-      headers:{Authorization:'Bearer '+token},
-      payload:JSON.stringify(payload),
-      muteHttpExceptions:true
-    });
+    const response=UrlFetchApp.fetch(
+      'https://api.github.com/repos/johngreen017/johngreen017.github.io/dispatches',
+      {
+        method:'post',
+        contentType:'application/json',
+        headers:{
+          Authorization:'Bearer ' + githubToken,
+          Accept:'application/vnd.github+json',
+          'X-GitHub-Api-Version':'2022-11-28'
+        },
+        payload:JSON.stringify(payload),
+        muteHttpExceptions:true
+      }
+    );
 
     const code=response.getResponseCode();
-    const raw=response.getContentText()||'{}';
-    let data={};
-    try{ data=JSON.parse(raw); }catch(_err){}
-
-    if(code<200 || code>=300 || !data.ok){
-      return {ok:false,error:data.error || ('Servicio respondió HTTP '+code)};
+    if(code!==204){
+      props.deleteProperty('SALARY_PENDING_' + msg.getId());
+      limpiarArchivoSueldoTemporal_(fileId);
+      return {ok:false,pendiente:true,error:'GitHub no aceptó el procesamiento (HTTP '+code+')'};
     }
 
-    const monto=Number(data.monto||0);
-    if(!monto || monto<=0) return {ok:false,error:'Monto líquido inválido'};
-    return {ok:true,monto};
+    return {ok:false,pendiente:true,dispatched:true,error:'Liquidación enviada a procesamiento'};
   }catch(err){
-    return {ok:false,error:'No se pudo conectar al servicio de liquidaciones'};
+    if(file){
+      try{ limpiarArchivoSueldoTemporal_(file.getId()); }catch(_err){}
+    }
+    props.deleteProperty('SALARY_PENDING_' + msg.getId());
+    return {ok:false,pendiente:true,error:'No se pudo enviar la liquidación a GitHub Actions'};
   }
 }
 
