@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
   <link rel="icon" type="image/png" href="./icon.png?v=2">
   <link rel="manifest" href="./site.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=7">
+  <link rel="stylesheet" href="./style.css?v=8">
 </head>
 <body>
   <main class="shell" id="panel">
@@ -111,6 +111,44 @@
       </div>
     </section>
 
+    <section class="card" id="tarjetas">
+      <div class="section-head"><div>
+        <h2>Tarjetas de crédito</h2>
+        <p class="subtle">Estados de cuenta pendientes, separados de las compras para evitar duplicar gastos.</p>
+      </div></div>
+      <div id="statementList" class="statement-list"><p class="subtle">Cargando estados de cuenta…</p></div>
+      <details class="statement-import">
+        <summary>Importar estado de cuenta (PDF)</summary>
+        <p class="subtle">Selecciona un PDF de tu dispositivo. Su contenido y contraseña no se envían a Mis Gastos; solo se guardan el banco, total y vencimiento cuando confirmas.</p>
+        <form id="statementForm" class="form">
+          <label>Tarjeta
+            <select id="statementBank" required>
+              <option value="">Selecciona el banco</option>
+              <option value="CMR Mastercard">CMR Mastercard</option>
+              <option value="Tenpo">Tenpo</option>
+              <option value="Santander">Santander</option>
+              <option value="Scotiabank Visa">Scotiabank Visa</option>
+            </select>
+          </label>
+          <label>Archivo PDF
+            <input id="statementPdf" type="file" accept="application/pdf,.pdf">
+          </label>
+          <label>Contraseña del PDF (solo en este dispositivo)
+            <input id="statementPdfPassword" type="password" autocomplete="off" placeholder="Si el PDF tiene clave, escríbela antes de elegirlo">
+          </label>
+          <label>Total a pagar en pesos chilenos
+            <input id="statementAmount" type="number" min="1" max="100000000" step="1" inputmode="numeric" required placeholder="Comprueba el total facturado">
+          </label>
+          <label>Fecha de vencimiento
+            <input id="statementDue" type="date" required>
+          </label>
+          <p class="subtle">Comprueba el total y la fecha con el documento: la lectura automática puede no reconocer ciertos formatos. El registro se guardará como PENDIENTE; no se marcará pagado.</p>
+          <button class="primary" id="statementSave" type="submit">Guardar como pendiente</button>
+          <p id="statementStatus" class="subtle" role="status" aria-live="polite"></p>
+        </form>
+      </details>
+    </section>
+
     <details class="card" id="registrarIngreso">
       <summary>Registrar ingreso o sueldo manualmente</summary>
       <form id="incomeForm" class="form">
@@ -189,6 +227,6 @@
     </form>
   </section>
 
-  <script src="./app.js?v=10"></script>
+  <script src="./app.js?v=11"></script>
 </body>
 </html>
