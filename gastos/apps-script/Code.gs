@@ -111,6 +111,45 @@ function doPost(e) {
     return json_({ ok:true, duplicado:false, movimiento });
   }
 
+  if (action === 'salary_callback') {
+    const props = PropertiesService.getScriptProperties();
+    const expected = String(props.getProperty('SALARY_CALLBACK_TOKEN') || '');
+    const token = String(e.parameter.token || '');
+    if (!expected || token !== expected) return json_({ ok:false, error:'No autorizado' });
+
+    const fileId = String(e.parameter.file_id || '');
+    const messageId = String(e.parameter.message_id || '');
+    const status = String(e.parameter.status || '').toLowerCase();
+
+    if (fileId) limpiarArchivoSueldoTemporal_(fileId);
+    if (messageId) props.deleteProperty('SALARY_PENDING_' + messageId);
+
+    if (status !== 'ok') {
+      return json_({ ok:false, error:String(e.parameter.error || 'No se pudo procesar la liquidación') });
+    }
+
+    const monto = Number(String(e.parameter.monto || '0').replace(/[^0-9]/g,''));
+    if (!monto || monto <= 0) return json_({ ok:false, error:'Monto líquido inválido' });
+    if (existeIngresoMensaje_(messageId)) return json_({ ok:true, duplicado:true });
+
+    const fecha = e.parameter.fecha ? new Date(e.parameter.fecha) : new Date();
+    const periodo = String(e.parameter.periodo || Utilities.formatDate(fecha,'America/Santiago','yyyy-MM'));
+
+    const ingreso = addIngreso_({
+      fecha,
+      tipo:'SUELDO',
+      descripcion:'Sueldo Carabineros',
+      monto,
+      moneda:'CLP',
+      fuente:'REMUNERACIONES_GMAIL',
+      mensajeId:messageId,
+      periodo,
+      estado:'CONFIRMADO'
+    });
+
+    return json_({ ok:true, ingreso });
+  }
+
   return json_({ ok:false, error:'Acción no soportada' });
 }
 
@@ -278,6 +317,39 @@ function existeMovimientoSimilar_(m) {
       comercio===String(m.comercio||'').trim().toLowerCase() &&
       cuenta===String(m.cuenta||'').trim().toLowerCase() &&
       !isNaN(fecha) && Math.abs(now-fecha) < 10*60*1000;
+  });
+}
+
+function limpiarArchivoSueldoTemporal_(fileId) {
+  const props = PropertiesService.getScriptProperties();
+  try {
+    const file = DriveApp.getFileById(fileId);
+    try { file.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (_err) {}
+    file.setTrashed(true);
+  } catch (_err) {}
+  props.deleteProperty('SALARY_TEMP_' + fileId);
+}
+
+function limpiarArchivosSueldoTemporales_() {
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  const now = Date.now();
+
+  Object.keys(all).forEach(key => {
+    if (!key.startsWith('SALARY_TEMP_')) return;
+    const timestamp = Number(all[key] || 0);
+    if (!timestamp || now - timestamp < 6 * 60 * 60 * 1000) return;
+    const fileId = key.substring('SALARY_TEMP_'.length);
+    limpiarArchivoSueldoTemporal_(fileId);
+  });
+
+  Object.keys(all).forEach(key => {
+    if (!key.startsWith('SALARY_PENDING_')) return;
+    let data = {};
+    try { data = JSON.parse(all[key] || '{}'); } catch (_err) {}
+    if (!data.timestamp || now - Number(data.timestamp) >= 6 * 60 * 60 * 1000) {
+      props.deleteProperty(key);
+    }
   });
 }
 
