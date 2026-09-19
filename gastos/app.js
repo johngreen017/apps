@@ -255,7 +255,7 @@ function renderMovements(){
           ${r.banco ? " · "+escapeHtml(r.banco) : ""}
           ${r.cuenta ? " · "+escapeHtml(r.cuenta) : ""}
           · ${formatDate(r.fecha)}
-          <div class="movement-actions"><span class="badge">${escapeHtml(String(r.tipo||"GASTO"))}</span><button type="button" class="inline-delete" aria-label="Eliminar ${escapeHtml(movementName(r))}">Eliminar</button></div>
+          <div><span class="badge">${escapeHtml(String(r.tipo||"GASTO"))}</span></div>
         </div>
       </div>
     </div>
@@ -264,49 +264,84 @@ function renderMovements(){
   box.querySelectorAll(".swipe-item").forEach(item=>{
     const row=item.querySelector(".movement");
     const del=item.querySelector(".swipe-delete");
-    const inlineDel=item.querySelector(".inline-delete");
     const id=item.dataset.id;
-    inlineDel.addEventListener("click",event=>{
-      event.stopPropagation();
-      eliminarMovimiento(id,item,inlineDel);
-    });
-    const close=()=>item.classList.remove("swipe-open");
-    let startX=0,startY=0,tracking=false,moved=false;
+    const width=112;
+    let startX=0,startY=0,startOffset=0,offset=0;
+    let tracking=false,axis="",dragged=false,suppressClick=false;
+    const settle=(open)=>{
+      item.classList.remove("swipe-dragging");
+      item.classList.toggle("swipe-open",open);
+      offset=open ? -width : 0;
+      row.style.transform="";
+      del.tabIndex=open ? 0 : -1;
+      del.setAttribute("aria-hidden",open ? "false" : "true");
+    };
+    const closeOthers=()=>{
+      box.querySelectorAll(".swipe-open").forEach(other=>{
+        if(other===item)return;
+        other.classList.remove("swipe-open","swipe-dragging");
+        const otherRow=other.querySelector(".movement");
+        otherRow.style.transform="";
+        const otherDel=other.querySelector(".swipe-delete");
+        otherDel.tabIndex=-1;
+        otherDel.setAttribute("aria-hidden","true");
+      });
+    };
+    del.tabIndex=-1;
+    del.setAttribute("aria-hidden","true");
     row.addEventListener("touchstart",event=>{
       if(event.touches.length!==1)return;
+      tracking=true;
+      axis="";
+      dragged=false;
       startX=event.touches[0].clientX;
       startY=event.touches[0].clientY;
-      moved=false;
-      tracking=true;
+      startOffset=item.classList.contains("swipe-open") ? -width : 0;
+      offset=startOffset;
     },{passive:true});
     row.addEventListener("touchmove",event=>{
-      if(!tracking)return;
+      if(!tracking || event.touches.length!==1)return;
       const dx=event.touches[0].clientX-startX;
       const dy=event.touches[0].clientY-startY;
-      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy))moved=true;
-    },{passive:true});
+      if(!axis){
+        if(Math.abs(dx)<7 && Math.abs(dy)<7)return;
+        axis=Math.abs(dx)>Math.abs(dy)*1.15 ? "horizontal" : "vertical";
+        if(axis==="horizontal"){
+          closeOthers();
+          item.classList.add("swipe-dragging");
+        }
+      }
+      if(axis!=="horizontal")return;
+      if(event.cancelable)event.preventDefault();
+      dragged=true;
+      offset=Math.max(-width-12,Math.min(12,startOffset+dx));
+      row.style.transform="translate3d("+offset+"px,0,0)";
+    },{passive:false});
     row.addEventListener("touchend",event=>{
       if(!tracking)return;
       tracking=false;
-      const dx=event.changedTouches[0].clientX-startX;
-      const dy=event.changedTouches[0].clientY-startY;
-      if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){
-        box.querySelectorAll(".swipe-open").forEach(other=>{if(other!==item)other.classList.remove("swipe-open");});
-        if(dx<0)item.classList.add("swipe-open");
-        else close();
-        moved=true;
-      }
+      if(axis==="horizontal" && dragged){
+        const dx=event.changedTouches[0].clientX-startX;
+        // A short deliberate flick also opens the action.
+        const open=offset < -width*0.42 || (dx < -30 && startOffset===0);
+        settle(open);
+        suppressClick=true;
+        window.setTimeout(()=>{suppressClick=false;},350);
+      }else item.classList.remove("swipe-dragging");
     },{passive:true});
-    row.addEventListener("touchcancel",()=>{tracking=false;});
+    row.addEventListener("touchcancel",()=>{
+      tracking=false;
+      settle(item.classList.contains("swipe-open"));
+    },{passive:true});
     row.addEventListener("click",()=>{
-      if(moved){moved=false;return;}
-      if(item.classList.contains("swipe-open")){close();return;}
+      if(suppressClick)return;
+      if(item.classList.contains("swipe-open")){settle(false);return;}
       openEditor(id);
     });
     row.addEventListener("keydown",event=>{
       if(event.key==="Enter"||event.key===" "){event.preventDefault();openEditor(id);}
-      if(event.key==="ArrowLeft"){event.preventDefault();item.classList.add("swipe-open");del.focus();}
-      if(event.key==="ArrowRight"||event.key==="Escape"){event.preventDefault();close();}
+      if(event.key==="ArrowLeft"){event.preventDefault();closeOthers();settle(true);del.focus();}
+      if(event.key==="ArrowRight"||event.key==="Escape"){event.preventDefault();settle(false);}
     });
     del.addEventListener("click",()=>eliminarMovimiento(id,item,del));
   });
