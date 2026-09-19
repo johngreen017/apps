@@ -374,3 +374,9 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+function probarSincronizacionSueldo() {
+  const resultado = syncGmail_();
+  console.log(JSON.stringify(resultado));
+  return resultado;
+}
