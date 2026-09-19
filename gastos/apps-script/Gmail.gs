@@ -365,3 +365,33 @@ function stripHtml_(html){
     .replace(/&amp;/gi,'&')
     .replace(/&#36;/g,'$');
 }
+
+function probarSueldoRapido_() {
+  const threads = GmailApp.search('newer_than:90d remuneraciones', 0, 20);
+  let revisados = 0;
+
+  for (const thread of threads) {
+    const messages = thread.getMessages().slice().reverse();
+
+    for (const msg of messages) {
+      revisados++;
+      if (!esCorreoRemuneraciones_(msg)) continue;
+
+      const id = msg.getId();
+      if (existeIngresoMensaje_(id)) {
+        return {ok:true,revisados,estado:'YA_REGISTRADO',messageId:id};
+      }
+
+      const resultado = procesarCorreoSueldo_(msg);
+      return {
+        ok:!!resultado.ok,
+        revisados,
+        estado:resultado.dispatched ? 'ENVIADO_A_GITHUB' : (resultado.pendiente ? 'PENDIENTE' : 'PROCESADO'),
+        error:resultado.error || '',
+        messageId:id
+      };
+    }
+  }
+
+  return {ok:false,revisados,estado:'NO_ENCONTRADO',error:'No se encontró correo de Remuneraciones'};
+}
