@@ -150,6 +150,10 @@ function guardarRegla_(patron, campo, categoria, subcategoria, banco) {
   const p=String(patron||'').trim();
   if(!p) return;
 
+  // No aprender descriptores genéricos de agregadores, porque pueden representar comercios distintos.
+  const generico = /^(?:merpago\*?comerci|mercado\s*pago|webpay|transbank|sumup)$/i.test(p.replace(/\s+/g,' ').trim());
+  if(generico) return;
+
   const last=sh.getLastRow();
   if(last>=2){
     const vals=sh.getRange(2,1,last-1,7).getValues();
