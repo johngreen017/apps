@@ -382,7 +382,13 @@ function probarSincronizacionSueldo() {
 }
 
 function autorizarDrive() {
-  const nombre = DriveApp.getRootFolder().getName();
-  console.log('Acceso a Drive autorizado: ' + nombre);
-  return nombre;
+  // Verifica permiso de escritura real: leer 'Mi unidad' no comprueba createFile.
+  const nombre = 'mis-gastos-prueba-permiso-' + Utilities.getUuid() + '.txt';
+  const archivo = DriveApp.createFile(nombre, 'Prueba temporal de autorización de Mis Gastos');
+  try {
+    console.log('Permiso de escritura en Drive confirmado');
+    return 'PERMISO_DRIVE_ESCRITURA_OK';
+  } finally {
+    archivo.setTrashed(true);
+  }
 }
