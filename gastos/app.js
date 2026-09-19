@@ -16,14 +16,33 @@ function apiReady(){
   return ok;
 }
 
+// La clave solo se conserva en esta sesión, nunca en el repositorio.
+let accessKey = sessionStorage.getItem("mg_access_key") || "";
+function pedirClavePrivada(){
+  const value = window.prompt("Clave privada de Mis Gastos (se guarda solo durante esta sesión):");
+  if(!value) return false;
+  accessKey=value.trim();
+  sessionStorage.setItem("mg_access_key",accessKey);
+  return true;
+}
 async function api(params={}, options={}){
   if(!apiReady()) throw new Error("Apps Script no configurado");
-  const u = new URL(GAS_URL);
-  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
-  const res = await fetch(u, options);
-  if(!res.ok) throw new Error("Error de conexión");
-  const data = await res.json();
-  if(data && data.ok === false) throw new Error(data.error || "Error");
+  const post = async ()=>{
+    const body=new URLSearchParams(options.body || "");
+    Object.entries(params).forEach(([k,v])=>body.set(k,v));
+    if(accessKey) body.set("access_key",accessKey);
+    const response=await fetch(GAS_URL,{...options,method:"POST",body});
+    if(!response.ok) throw new Error("Error de conexión");
+    return response.json();
+  };
+  let data=await post();
+  if(data && data.ok===false && /acceso no autorizado/i.test(data.error||"")){
+    accessKey="";
+    sessionStorage.removeItem("mg_access_key");
+    if(!pedirClavePrivada()) throw new Error("Necesitas tu clave privada para consultar Mis Gastos.");
+    data=await post();
+  }
+  if(data && data.ok===false) throw new Error(data.error || "Error");
   return data;
 }
 
