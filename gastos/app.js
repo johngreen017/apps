@@ -409,6 +409,56 @@ $("manualForm").addEventListener("submit",async e=>{
   }
 });
 
+// El cambio de clave solo se solicita desde este formulario y no modifica los datos.
+$("changeKeyForm").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const status=$("changeKeyStatus");
+  const btn=$("changeKeyBtn");
+  const actual=$("currentAccessKey").value;
+  const nueva=$("newAccessKey").value;
+  const confirmar=$("confirmAccessKey").value;
+  status.textContent="";
+  if(nueva!==confirmar){
+    status.textContent="La confirmación no coincide con la nueva clave.";
+    return;
+  }
+  if(nueva.length<16||nueva.length>128||nueva.trim()!==nueva){
+    status.textContent="La nueva clave debe tener entre 16 y 128 caracteres, sin espacios al principio ni al final.";
+    return;
+  }
+  if(actual===nueva){
+    status.textContent="Elige una clave diferente a la actual.";
+    return;
+  }
+  if(!window.confirm("¿Cambiar tu clave privada? Deberás ingresar la nueva clave en tus otros dispositivos.")) return;
+  btn.disabled=true;
+  status.textContent="Actualizando la clave…";
+  const estabaRecordada=Boolean(leerGuardado(localStorage,TRUSTED_KEY_NAME));
+  try{
+    const body=new URLSearchParams({
+      action:"change_access_key",
+      access_key:actual,
+      new_access_key:nueva
+    });
+    // Usar fetch directo: api() agrega la clave almacenada, que podría diferir
+    // de la clave actual ingresada manualmente.
+    const response=await fetch(GAS_URL,{method:"POST",body});
+    if(!response.ok) throw new Error("No se pudo conectar al servicio.");
+    const result=await response.json();
+    if(result.ok!==true||result.changed!==true) throw new Error(result.error||"No se pudo cambiar la clave.");
+    accessKey=nueva;
+    escribirGuardado(sessionStorage,ACCESS_KEY_NAME,nueva);
+    if(estabaRecordada) escribirGuardado(localStorage,TRUSTED_KEY_NAME,nueva);
+    borrarGuardado(sessionStorage,REMEMBER_ASKED);
+    $("changeKeyForm").reset();
+    status.textContent="Clave cambiada. Actualiza la clave en tus otros dispositivos.";
+  }catch(error){
+    status.textContent=error.message||"No se pudo cambiar la clave.";
+  }finally{
+    btn.disabled=false;
+  }
+});
+
 // Navegación visual: todos los accesos apuntan a funciones existentes.
 function openNewExpense(){
   const formCard=$("registrarGasto");
