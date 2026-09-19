@@ -376,7 +376,7 @@ function json_(obj) {
 }
 
 function probarSincronizacionSueldo() {
-  const resultado = syncGmail_();
+  const resultado = probarSueldoRapido_();
   console.log(JSON.stringify(resultado));
   return resultado;
 }
