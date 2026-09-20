@@ -4,12 +4,14 @@ const $ = (id) => document.getElementById(id);
 const money = new Intl.NumberFormat("es-CL",{style:"currency",currency:"CLP",maximumFractionDigits:0});
 const categories = [
   "Alimentación","Supermercado","Transporte","Combustible","Hogar","Salud",
-  "Educación","Ropa","Suscripciones","Servicios","Transferencias","Efectivo","Otros"
+  "Educación","Ropa","Suscripciones","Servicios","Seguros","Impuestos y contribuciones","Transferencias","Efectivo","Otros"
 ];
 
 let allRows = [];
 let allIncomes = [];
 let allStatements = [];
+let allServipag = [];
+let servipagEstado = {};
 
 function apiReady(){
   const ok = /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(GAS_URL);
@@ -192,7 +194,7 @@ function salidasSinDuplicadosDelDia(rows,now){
   const salidas=rows.filter(r=>{
     const fecha=new Date(r.fecha);
     return !isNaN(fecha) && sameDay(fecha,now) && tipoSalidaDeCuenta(r) &&
-      Number(r.monto)>0;
+      !esComprobanteServipagDuplicado_(r) && Number(r.monto)>0;
   });
   const transferencias=salidas.filter(r=>String(r.tipo||"").toUpperCase()==="TRANSFERENCIA");
   const conciliadas=new Set();
@@ -217,6 +219,49 @@ function salidasSinDuplicadosDelDia(rows,now){
   });
 }
 
+function movimientosConciliadosServipag_(){
+  return new Set(allServipag.map(x=>String(x.movimientoId)));
+}
+function comprobantesServipag_(){
+  return new Set(allServipag.map(x=>String(x.mensajeId)));
+}
+function esComprobanteServipagDuplicado_(r){
+  return Boolean(r.mensajeId) && comprobantesServipag_().has(String(r.mensajeId));
+}
+function esGastoMensual_(r){
+  return !esComprobanteServipagDuplicado_(r) &&
+    (isExpense(r) || movimientosConciliadosServipag_().has(String(r.id)));
+}
+function renderServipag_(){
+  const box=$("servipagBreakdown");
+  if(!box)return;
+  const now=new Date();
+  const rows=allServipag.filter(r=>{
+    const d=new Date(r.fecha);
+    return !isNaN(d)&&sameMonth(d,now);
+  });
+  if(rows.length){
+    const total=rows.reduce((n,r)=>n+Number(r.monto||0),0);
+    box.innerHTML='<h3>Servicios pagados mediante Servipag</h3>'+
+      '<p class="subtle">Desglose del pago bancario, sin sumar otro cargo. Total conciliado del mes: '+money.format(total)+'</p>'+
+      rows.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
+        '</strong><p class="subtle">'+escapeHtml(r.categoria)+' · '+escapeHtml(r.banco)+'</p></div>'+
+        '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("");
+    box.classList.remove("hidden");
+  }else{
+    const state=servipagEstado||{};
+    if(state.encontrados||state.pendientes||state.erroresDeFormato||state.error){
+      box.innerHTML='<h3>Servipag</h3><p class="subtle">'+
+        escapeHtml(state.error||(
+          state.pendientes||state.erroresDeFormato ?
+          'Hay comprobantes que aún no se pudieron asociar con seguridad a una salida bancaria o cuyo desglose no coincide con el total. No se agregaron importes sin verificar.' :
+          'No hay servicios de Servipag conciliados este mes.'
+        ))+'</p>';
+      box.classList.remove("hidden");
+    }else box.classList.add("hidden");
+  }
+}
+
 function renderSummary(){
   const rows=validRows();
   const incomes=validIncomes();
@@ -224,7 +269,7 @@ function renderSummary(){
 
   const monthExpenses=rows.filter(r=>{
     const d=new Date(r.fecha);
-    return !isNaN(d) && sameMonth(d,now) && isExpense(r);
+    return !isNaN(d) && sameMonth(d,now) && esGastoMensual_(r);
   });
 
   const monthIncomes=incomes.filter(r=>{
@@ -299,14 +344,24 @@ async function resolverSueldo(id,confirmar,item){
 
 function renderCategoryBars(){
   const now=new Date();
+  const bankIds=movimientosConciliadosServipag_();
   const rows=validRows().filter(r=>{
     const d=new Date(r.fecha);
-    return !isNaN(d) && sameMonth(d,now) && isExpense(r);
+    return !isNaN(d) && sameMonth(d,now) && esGastoMensual_(r) &&
+      !bankIds.has(String(r.id));
   });
 
   const totals={};
   rows.forEach(r=>{
     const cat=movementCategory(r);
+    totals[cat]=(totals[cat]||0)+Number(r.monto||0);
+  });
+  // Los conceptos de Servipag sustituyen al gasto global del banco;
+  // solo en la distribución por categoría, no en el flujo de caja.
+  allServipag.forEach(r=>{
+    const d=new Date(r.fecha);
+    if(isNaN(d)||!sameMonth(d,now))return;
+    const cat=String(r.categoria||"Servicios");
     totals[cat]=(totals[cat]||0)+Number(r.monto||0);
   });
 
@@ -468,6 +523,7 @@ async function eliminarMovimiento(id,item,button){
 function render(){
   renderSummary();
   renderCategoryBars();
+  renderServipag_();
   renderBankFilter();
   renderMovements();
   renderStatements();
@@ -501,6 +557,8 @@ async function refresh(){
     allRows=data.movimientos||[];
     allIncomes=data.ingresos||[];
     allStatements=data.estadosCuenta||[];
+    allServipag=data.detallesServipag||[];
+    servipagEstado=data.estadoServipag||{};
     render();
   }finally{
     $("refreshBtn").disabled=false;
