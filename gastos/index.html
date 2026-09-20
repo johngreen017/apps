@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
   <link rel="icon" type="image/png" href="./icon.png?v=2">
   <link rel="manifest" href="./site.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=8">
+  <link rel="stylesheet" href="./style.css?v=9">
 </head>
 <body>
   <main class="shell" id="panel">
@@ -74,12 +74,13 @@
       <div class="section-head">
         <div>
           <h2>Gastos principales</h2>
-          <p class="subtle">Gastos del mes, sin transferencias ni giros.</p>
+          <p class="subtle">Gastos del mes por categoría, incluyendo los servicios conciliados de Servipag sin duplicar el cargo bancario.</p>
         </div>
       </div>
       <div id="categoryBars" class="category-bars">
         <p class="empty">Aún no hay datos este mes.</p>
       </div>
+      <div id="servipagBreakdown" class="servipag-breakdown hidden" aria-live="polite"></div>
     </section>
 
     <section class="card" id="movimientos">
@@ -227,6 +228,6 @@
     </form>
   </section>
 
-  <script src="./app.js?v=14"></script>
+  <script src="./app.js?v=15"></script>
 </body>
 </html>
