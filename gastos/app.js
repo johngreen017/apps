@@ -679,12 +679,29 @@ function parseStatementPreview(text){
 function renderStatements(){
   const box=$("statementList");
   if(!box)return;
-  const rows=allStatements.filter(r=>r.estado==="PENDIENTE");
-  box.innerHTML=rows.length?rows.map(r=>`
-    <div class="statement-item">
-      <div><strong>${escapeHtml(r.banco)}</strong><p class="subtle">Vence: ${escapeHtml(r.vencimiento)} · Pendiente de pago</p></div>
-      <strong>${money.format(Number(r.saldoPendienteCLP||0))}</strong>
-    </div>`).join(""):'<p class="subtle">No hay estados de cuenta pendientes registrados.</p>';
+  const cards=["CMR Mastercard","Tenpo","Santander","Scotiabank Visa"];
+  const active=allStatements.filter(r=>String(r.estado||"").toUpperCase()!=="DESCARTADO");
+  box.innerHTML=cards.map(bank=>{
+    const row=active.filter(r=>String(r.banco||"")===bank)
+      .sort((a,b)=>String(b.vencimiento||"").localeCompare(String(a.vencimiento||"")))[0];
+    if(!row)return `
+      <div class="statement-item is-empty">
+        <div><strong>${escapeHtml(bank)}</strong><p class="subtle">Sin estado de cuenta registrado</p></div>
+        <strong aria-label="Sin monto">—</strong>
+      </div>`;
+    const state=String(row.estado||"PENDIENTE").toUpperCase();
+    const paid=state==="PAGADO";
+    const status=paid?"Pagado":"Pendiente de pago";
+    const amount=paid?Number(row.totalFacturadoCLP||0):Number(row.saldoPendienteCLP||0);
+    return `
+      <div class="statement-item ${paid?"is-paid":"is-pending"}">
+        <div>
+          <strong>${escapeHtml(bank)}</strong>
+          <p class="subtle">Vence: ${escapeHtml(row.vencimiento||"—")} · <span class="statement-state">${status}</span></p>
+        </div>
+        <strong>${money.format(amount)}</strong>
+      </div>`;
+  }).join("");
 }
 $("statementPdf").addEventListener("change",async event=>{
   const file=event.target.files&&event.target.files[0];
