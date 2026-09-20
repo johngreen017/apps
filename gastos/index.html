@@ -70,17 +70,29 @@
       </article>
     </section>
 
+    <section class="card servipag-card" id="servipag" aria-label="Pagos Servipag del período de sueldo">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">CUENTAS DESDE EL SUELDO</p>
+          <h2>Pagos Servipag</h2>
+          <p class="subtle" id="servipagPeriod">Pagos desde el 18 o 19 del mes, según tu sueldo recibido.</p>
+        </div>
+      </div>
+      <div id="servipagBreakdown" class="servipag-breakdown" aria-live="polite">
+        <p class="empty">Cargando pagos y servicios…</p>
+      </div>
+    </section>
+
     <section class="card" id="categorias">
       <div class="section-head">
         <div>
           <h2>Gastos principales</h2>
-          <p class="subtle">Gastos del mes por categoría, incluyendo los servicios conciliados de Servipag sin duplicar el cargo bancario.</p>
+          <p class="subtle">Gastos del mes por categoría. Los pagos de Servipag aparecen arriba, con su desglose y sin duplicar el cargo bancario.</p>
         </div>
       </div>
       <div id="categoryBars" class="category-bars">
         <p class="empty">Aún no hay datos este mes.</p>
       </div>
-      <div id="servipagBreakdown" class="servipag-breakdown hidden" aria-live="polite"></div>
     </section>
 
     <section class="card" id="movimientos">
@@ -228,6 +240,6 @@
     </form>
   </section>
 
-  <script src="./app.js?v=16"></script>
+  <script src="./app.js?v=17"></script>
 </body>
 </html>
