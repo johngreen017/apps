@@ -164,6 +164,59 @@ function filteredRows(){
   });
 }
 
+// "Gastado hoy" mide salidas efectivas de cuentas, no compras con crédito
+// ni los montos referenciales de los estados de cuenta.
+function tipoSalidaDeCuenta(r){
+  const tipo=String(r.tipo||"").toUpperCase();
+  if(["PAGO","TRANSFERENCIA","GIRO"].includes(tipo))return true;
+  // Una compra identificada expresamente como débito también salió hoy
+  // de la cuenta. Las compras con crédito y los gastos sin medio verificable no.
+  if(tipo==="COMPRA"){
+    const cuenta=String(r.cuenta||"");
+    const descripcion=String(r.descripcion||"");
+    return /d[eé]bito/i.test(cuenta) || /tarjeta\s+de\s+d[eé]bito/i.test(descripcion);
+  }
+  return false;
+}
+function bancoTarjetaMencionado(r){
+  // La coincidencia se basa en la entidad destinataria, nunca solo en el monto.
+  const dato=[r.descripcion,r.comercio,r.cuenta].map(x=>String(x||"")).join(" ")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  if(/falabella|\bcmr\b/.test(dato))return "falabella";
+  if(/\btenpo\b/.test(dato))return "tenpo";
+  if(/santander/.test(dato))return "santander";
+  if(/scotiabank|\bscotia\b/.test(dato))return "scotiabank";
+  return "";
+}
+function salidasSinDuplicadosDelDia(rows,now){
+  const salidas=rows.filter(r=>{
+    const fecha=new Date(r.fecha);
+    return !isNaN(fecha) && sameDay(fecha,now) && tipoSalidaDeCuenta(r) &&
+      Number(r.monto)>0;
+  });
+  const transferencias=salidas.filter(r=>String(r.tipo||"").toUpperCase()==="TRANSFERENCIA");
+  const conciliadas=new Set();
+  return salidas.filter(r=>{
+    if(String(r.tipo||"").toUpperCase()!=="PAGO")return true;
+    const destino=bancoTarjetaMencionado(r);
+    if(!destino)return true;
+    const detalle=[r.descripcion,r.comercio,r.cuenta].join(" ").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"").toLowerCase();
+    // Solo se considera duplicado el comprobante de pago de una TARJETA,
+    // no otro pago al mismo banco (crédito hipotecario, servicios, etc.).
+    if(!/tarjeta|\bcmr\b|mastercard|\bvisa\b/.test(detalle))return true;
+    const match=transferencias.find(t=>{
+      if(conciliadas.has(t))return false;
+      if(bancoTarjetaMencionado(t)!==destino)return false;
+      if(Number(t.monto)!==Number(r.monto))return false;
+      return true;
+    });
+    if(!match)return true;
+    conciliadas.add(match);
+    return false; // El dinero se cuenta una vez por la transferencia original.
+  });
+}
+
 function renderSummary(){
   const rows=validRows();
   const incomes=validIncomes();
@@ -179,15 +232,7 @@ function renderSummary(){
     return !isNaN(d) && sameMonth(d,now);
   });
 
-  // "Gastado hoy" refleja todas las salidas de dinero del día, incluidas
-  // transferencias y giros. El gasto mensual sigue excluyéndolos para
-  // mantener intactas las métricas de consumo del sueldo y categorías.
-  const todayExpenses=rows.filter(r=>{
-    const d=new Date(r.fecha);
-    const tipo=String(r.tipo||"GASTO").toUpperCase();
-    return !isNaN(d) && sameDay(d,now) &&
-      ["COMPRA","GASTO","PAGO","TRANSFERENCIA","GIRO"].includes(tipo);
-  });
+  const todayExpenses=salidasSinDuplicadosDelDia(rows,now);
 
   const monthTotal=monthExpenses.reduce((a,r)=>a+Number(r.monto||0),0);
   const incomeTotal=monthIncomes.reduce((a,r)=>a+Number(r.monto||0),0);
