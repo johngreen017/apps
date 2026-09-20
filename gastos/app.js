@@ -219,11 +219,15 @@ function salidasSinDuplicadosDelDia(rows,now){
   });
 }
 
+function detallesConfirmadosServipag_(){
+  return allServipag.filter(x=>String(x.estado||"").toUpperCase()==="CONCILIADO" &&
+    Boolean(x.movimientoId));
+}
 function movimientosConciliadosServipag_(){
-  return new Set(allServipag.map(x=>String(x.movimientoId)));
+  return new Set(detallesConfirmadosServipag_().map(x=>String(x.movimientoId)));
 }
 function comprobantesServipag_(){
-  return new Set(allServipag.map(x=>String(x.mensajeId)));
+  return new Set(detallesConfirmadosServipag_().map(x=>String(x.mensajeId)));
 }
 function esComprobanteServipagDuplicado_(r){
   return Boolean(r.mensajeId) && comprobantesServipag_().has(String(r.mensajeId));
@@ -236,30 +240,42 @@ function renderServipag_(){
   const box=$("servipagBreakdown");
   if(!box)return;
   const now=new Date();
-  const rows=allServipag.filter(r=>{
+  const conciliados=detallesConfirmadosServipag_().filter(r=>{
     const d=new Date(r.fecha);
     return !isNaN(d)&&sameMonth(d,now);
   });
-  if(rows.length){
-    const total=rows.reduce((n,r)=>n+Number(r.monto||0),0);
-    box.innerHTML='<h3>Servicios pagados mediante Servipag</h3>'+
-      '<p class="subtle">Desglose del pago bancario, sin sumar otro cargo. Total conciliado del mes: '+money.format(total)+'</p>'+
-      rows.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
+  const pendientes=allServipag.filter(r=>String(r.estado||"").toUpperCase()==="PENDIENTE_BANCO")
+    .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,35);
+  let html="";
+  if(conciliados.length){
+    const total=conciliados.reduce((n,r)=>n+Number(r.monto||0),0);
+    html+='<h3>Servicios pagados mediante Servipag</h3>'+
+      '<p class="subtle">Desglose confirmado con el banco; no crea un segundo cargo. Total conciliado del mes: '+
+      money.format(total)+'</p>'+
+      conciliados.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
         '</strong><p class="subtle">'+escapeHtml(r.categoria)+' · '+escapeHtml(r.banco)+'</p></div>'+
         '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("");
-    box.classList.remove("hidden");
-  }else{
-    const state=servipagEstado||{};
-    if(state.encontrados||state.pendientes||state.erroresDeFormato||state.error){
-      box.innerHTML='<h3>Servipag</h3><p class="subtle">'+
-        escapeHtml(state.error||(
-          state.pendientes||state.erroresDeFormato ?
-          'Hay comprobantes que aún no se pudieron asociar con seguridad a una salida bancaria o cuyo desglose no coincide con el total. No se agregaron importes sin verificar.' :
-          'No hay servicios de Servipag conciliados este mes.'
-        ))+'</p>';
-      box.classList.remove("hidden");
-    }else box.classList.add("hidden");
   }
+  if(pendientes.length){
+    html+='<div class="servipag-pending"><h3>Servipag: servicios por conciliar</h3>'+
+      '<p class="subtle">Estos importes están desglosados desde los comprobantes reales, pero aún no se ha identificado una salida bancaria única. Se muestran solo como referencia: no se suman a tus gastos ni al dinero que salió de tus cuentas.</p>'+
+      pendientes.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
+        '</strong><p class="subtle">'+escapeHtml(r.categoria)+' · '+escapeHtml(r.banco)+
+        ' · '+escapeHtml(formatDate(r.fecha))+'</p></div>'+
+        '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("")+
+      '</div>';
+  }
+  const state=servipagEstado||{};
+  if(state.erroresDeFormato){
+    html+='<p class="subtle">Hay '+Number(state.erroresDeFormato)+
+      ' correo(s) de Servipag cuyo desglose aún no se pudo verificar; no se han registrado importes estimados.</p>';
+  }
+  if(!html && (state.encontrados||state.pendientes||state.error)){
+    html='<h3>Servipag</h3><p class="subtle">'+escapeHtml(state.error||
+      'Hay comprobantes que todavía necesitan una coincidencia bancaria verificable.')+'</p>';
+  }
+  box.innerHTML=html;
+  box.classList.toggle("hidden",!html);
 }
 
 function renderSummary(){
@@ -358,7 +374,7 @@ function renderCategoryBars(){
   });
   // Los conceptos de Servipag sustituyen al gasto global del banco;
   // solo en la distribución por categoría, no en el flujo de caja.
-  allServipag.forEach(r=>{
+  detallesConfirmadosServipag_().forEach(r=>{
     const d=new Date(r.fecha);
     if(isNaN(d)||!sameMonth(d,now))return;
     const cat=String(r.categoria||"Servicios");
