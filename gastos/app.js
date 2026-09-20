@@ -245,7 +245,7 @@ function renderServipag_(){
     return !isNaN(d)&&sameMonth(d,now);
   });
   const pendientes=allServipag.filter(r=>String(r.estado||"").toUpperCase()==="PENDIENTE_BANCO")
-    .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,35);
+    .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   let html="";
   if(conciliados.length){
     const total=conciliados.reduce((n,r)=>n+Number(r.monto||0),0);
@@ -257,13 +257,23 @@ function renderServipag_(){
         '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("");
   }
   if(pendientes.length){
+    const pendientesPorCategoria={};
+    pendientes.forEach(r=>{
+      const cat=String(r.categoria||"Servicios");
+      pendientesPorCategoria[cat]=(pendientesPorCategoria[cat]||0)+Number(r.monto||0);
+    });
     html+='<div class="servipag-pending"><h3>Servipag: servicios por conciliar</h3>'+
-      '<p class="subtle">Estos importes están desglosados desde los comprobantes reales, pero aún no se ha identificado una salida bancaria única. Se muestran solo como referencia: no se suman a tus gastos ni al dinero que salió de tus cuentas.</p>'+
+      '<p class="subtle">Importes identificados en comprobantes reales de Servipag. Se muestran por categoría solo como referencia: todavía no se suman a tus gastos ni al dinero que salió de tus cuentas.</p>'+
+      Object.entries(pendientesPorCategoria).sort((a,b)=>b[1]-a[1]).map(([cat,total])=>
+        '<div class="servipag-line"><div><strong>'+escapeHtml(cat)+
+        '</strong><p class="subtle">Por asociar a un movimiento bancario</p></div><strong>'+
+        money.format(total)+'</strong></div>').join("")+
+      '<details class="servipag-items"><summary>Ver los '+pendientes.length+' servicios individualmente</summary>'+
       pendientes.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
         '</strong><p class="subtle">'+escapeHtml(r.categoria)+' · '+escapeHtml(r.banco)+
         ' · '+escapeHtml(formatDate(r.fecha))+'</p></div>'+
         '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("")+
-      '</div>';
+      '</details></div>';
   }
   const state=servipagEstado||{};
   if(state.erroresDeFormato){
