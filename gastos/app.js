@@ -179,7 +179,15 @@ function renderSummary(){
     return !isNaN(d) && sameMonth(d,now);
   });
 
-  const todayExpenses=monthExpenses.filter(r=>sameDay(new Date(r.fecha),now));
+  // "Gastado hoy" refleja todas las salidas de dinero del día, incluidas
+  // transferencias y giros. El gasto mensual sigue excluyéndolos para
+  // mantener intactas las métricas de consumo del sueldo y categorías.
+  const todayExpenses=rows.filter(r=>{
+    const d=new Date(r.fecha);
+    const tipo=String(r.tipo||"GASTO").toUpperCase();
+    return !isNaN(d) && sameDay(d,now) &&
+      ["COMPRA","GASTO","PAGO","TRANSFERENCIA","GIRO"].includes(tipo);
+  });
 
   const monthTotal=monthExpenses.reduce((a,r)=>a+Number(r.monto||0),0);
   const incomeTotal=monthIncomes.reduce((a,r)=>a+Number(r.monto||0),0);
