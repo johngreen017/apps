@@ -137,3 +137,27 @@ details[open] summary{padding-bottom:13px;border-bottom:1px solid var(--line)}
 .servipag-line:last-child{border-bottom:0;padding-bottom:0}
 .servipag-line strong{font-size:14px;font-weight:740;overflow-wrap:anywhere}
 .servipag-line>strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* Un comprobante Servipag = un pago bancario = un total y su desglose. */
+.servipag-card{border:1px solid rgba(70,148,255,.22);background:linear-gradient(155deg,#171b25,#171719 42%);}
+.servipag-card .section-head{margin-bottom:18px}
+.servipag-card .section-head .eyebrow{color:#76a9ff}
+.servipag-card .servipag-breakdown{margin-top:0;padding-top:0;border-top:0}
+.servipag-total{border-radius:18px;background:linear-gradient(135deg,#17427a,#173154);padding:18px;margin-bottom:18px;border:1px solid rgba(135,186,255,.16)}
+.servipag-total strong{display:block;margin:8px 0;font-size:clamp(26px,5vw,36px);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.servipag-total .subtle{color:#cad7ef}
+.servipag-payment{background:#22242a;border:1px solid rgba(255,255,255,.075);border-radius:20px;padding:17px;margin-bottom:12px}
+.servipag-payment-pending{border-style:dashed;border-color:rgba(255,255,255,.17);background:#1b1c21}
+.servipag-payment-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.servipag-payment-head>div{min-width:0}
+.servipag-payment-head>strong{font-size:clamp(20px,5vw,29px);letter-spacing:-.035em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.servipag-payment-title{font-size:17px;font-weight:800;color:#fff}
+.servipag-payment-state{display:inline-block;margin:12px 0 6px;font-size:11px;font-weight:740;padding:6px 10px;border-radius:999px}
+.servipag-payment-state.is-confirmed{background:#153e2b;color:#91edb4}
+.servipag-payment-state.is-pending{background:#3c3120;color:#efd095}
+.servipag-payment-items{margin-top:4px}
+.servipag-payment-foot{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:14px;margin-top:5px;font-size:13px;color:#c4c4ce}
+.servipag-payment-foot strong{font-size:15px;color:white;font-variant-numeric:tabular-nums}
+.servipag-pending-head{margin:25px 0 12px;padding-top:20px;border-top:1px solid var(--line)}
+.servipag-pending-head h3{margin:0 0 7px;font-size:18px}
+@media(max-width:420px){.servipag-payment-head>strong{font-size:19px}.servipag-payment{padding:14px}.servipag-card{padding:18px 14px}}
