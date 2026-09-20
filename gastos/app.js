@@ -95,6 +95,9 @@ function populateCategorySelects(){
 }
 
 function movementName(r){
+  // Mostrar el pago global en el historial; los servicios están en el
+  // banner propio y no generan nuevos movimientos monetarios.
+  if(movimientosConciliadosServipag_().has(String(r.id)))return "Pago Servipag";
   const desc=String(r.descripcion||"").trim();
   const commerce=String(r.comercio||"").trim();
   let type=String(r.tipo||"").toUpperCase();
@@ -236,56 +239,94 @@ function esGastoMensual_(r){
   return !esComprobanteServipagDuplicado_(r) &&
     (isExpense(r) || movimientosConciliadosServipag_().has(String(r.id)));
 }
+// El período de cuentas comienza con el sueldo recibido el 18 o 19.
+// Si todavía no hay sueldo confirmado, parte el 18; no mostrar pagos del
+// ciclo anterior. No asumir que las cuentas se pagan solo una vez al mes.
+function inicioPeriodoServipag_(now){
+  const cutoff=new Date(now.getFullYear(),now.getMonth(),18,0,0,0,0);
+  if(now<cutoff)cutoff.setMonth(cutoff.getMonth()-1);
+  const salaries=allIncomes.filter(r=>{
+    const d=new Date(r.fecha);
+    return !isNaN(d)&&d>=cutoff&&d<=now &&
+      String(r.estado||"").toUpperCase()==="CONFIRMADO" &&
+      String(r.tipo||"").toUpperCase()==="SUELDO" &&
+      [18,19].includes(d.getDate());
+  }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  if(salaries.length){
+    const d=new Date(salaries[0].fecha);
+    cutoff.setFullYear(d.getFullYear(),d.getMonth(),d.getDate());
+  }
+  return cutoff;
+}
+function gruposPagosServipag_(rows){
+  const groups=new Map();
+  rows.forEach(r=>{
+    // Agrupar por comprobante; dos pagos del mismo día siguen siendo dos
+    // operaciones distintas, sin inventar un total global como un solo pago.
+    const key=String(r.mensajeId||r.id||"");
+    if(!key)return;
+    if(!groups.has(key)){
+      groups.set(key,{id:key,fecha:r.fecha,banco:String(r.banco||""),
+        total:Number(r.total||0),movimientoId:String(r.movimientoId||""),
+        estado:String(r.estado||""),servicios:[]});
+    }
+    groups.get(key).servicios.push(r);
+  });
+  return [...groups.values()].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+}
 function renderServipag_(){
   const box=$("servipagBreakdown");
   if(!box)return;
   const now=new Date();
-  const conciliados=detallesConfirmadosServipag_().filter(r=>{
+  const start=inicioPeriodoServipag_(now);
+  $("servipagPeriod").textContent="Desde "+start.toLocaleDateString("es-CL",
+    {day:"2-digit",month:"long",year:"numeric"})+" · hasta hoy";
+  const groups=gruposPagosServipag_(allServipag.filter(r=>{
     const d=new Date(r.fecha);
-    return !isNaN(d)&&sameMonth(d,now);
-  });
-  const pendientes=allServipag.filter(r=>String(r.estado||"").toUpperCase()==="PENDIENTE_BANCO")
-    .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+    return !isNaN(d) && d>=start && d<=now &&
+      ["CONCILIADO","PENDIENTE_BANCO"].includes(String(r.estado||"").toUpperCase());
+  }));
+  const verified=groups.filter(g=>g.estado.toUpperCase()==="CONCILIADO" && g.movimientoId);
+  const pending=groups.filter(g=>g.estado.toUpperCase()==="PENDIENTE_BANCO");
   let html="";
-  if(conciliados.length){
-    const total=conciliados.reduce((n,r)=>n+Number(r.monto||0),0);
-    html+='<h3>Servicios pagados mediante Servipag</h3>'+
-      '<p class="subtle">Desglose confirmado con el banco; no crea un segundo cargo. Total conciliado del mes: '+
-      money.format(total)+'</p>'+
-      conciliados.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
-        '</strong><p class="subtle">'+escapeHtml(r.categoria)+' · '+escapeHtml(r.banco)+'</p></div>'+
-        '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("");
+  if(verified.length){
+    const total=verified.reduce((v,g)=>v+g.total,0);
+    html+='<div class="servipag-total"><div><span class="eyebrow">PAGOS CONFIRMADOS DEL PERÍODO</span>'+
+      '<strong>'+money.format(total)+'</strong><p class="subtle">'+verified.length+
+      (verified.length===1?' pago':' pagos')+' bancarios; cada uno se cuenta una sola vez.</p></div></div>';
   }
-  if(pendientes.length){
-    const pendientesPorCategoria={};
-    pendientes.forEach(r=>{
-      const cat=String(r.categoria||"Servicios");
-      pendientesPorCategoria[cat]=(pendientesPorCategoria[cat]||0)+Number(r.monto||0);
-    });
-    html+='<div class="servipag-pending"><h3>Servipag: servicios por conciliar</h3>'+
-      '<p class="subtle">Importes identificados en comprobantes reales de Servipag. Se muestran por categoría solo como referencia: todavía no se suman a tus gastos ni al dinero que salió de tus cuentas.</p>'+
-      Object.entries(pendientesPorCategoria).sort((a,b)=>b[1]-a[1]).map(([cat,total])=>
-        '<div class="servipag-line"><div><strong>'+escapeHtml(cat)+
-        '</strong><p class="subtle">Por asociar a un movimiento bancario</p></div><strong>'+
-        money.format(total)+'</strong></div>').join("")+
-      '<details class="servipag-items"><summary>Ver los '+pendientes.length+' servicios individualmente</summary>'+
-      pendientes.map(r=>'<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
-        '</strong><p class="subtle">'+escapeHtml(r.categoria)+' · '+escapeHtml(r.banco)+
-        ' · '+escapeHtml(formatDate(r.fecha))+'</p></div>'+
-        '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("")+
-      '</details></div>';
+  const renderGroup=(g,confirmed)=>{
+    const itemSum=g.servicios.reduce((a,r)=>a+Number(r.monto||0),0);
+    const matches=itemSum===g.total&&g.total>0;
+    const title="Pago Servipag";
+    let inner='<div class="servipag-payment-head"><div><span class="servipag-payment-title">'+title+
+      '</span><p class="subtle">'+escapeHtml(formatDate(g.fecha))+' · '+escapeHtml(g.banco)+
+      '</p></div><strong>'+money.format(g.total)+'</strong></div>';
+    inner+='<p class="servipag-payment-state '+(confirmed?"is-confirmed":"is-pending")+'">'+
+      (confirmed?"Pago confirmado en el banco":"Desglose recibido · falta confirmar salida bancaria")+'</p>';
+    inner+='<div class="servipag-payment-items">'+g.servicios.map(r=>
+      '<div class="servipag-line"><div><strong>'+escapeHtml(r.servicio)+
+      '</strong><p class="subtle">'+escapeHtml(r.categoria)+'</p></div>'+
+      '<strong>'+money.format(Number(r.monto||0))+'</strong></div>').join("")+'</div>';
+    inner+='<div class="servipag-payment-foot"><span>Suma de los servicios</span><strong>'+
+      money.format(itemSum)+'</strong></div>';
+    if(!matches)inner+='<p class="subtle">Revisar: el detalle no coincide con el importe total.</p>';
+    return '<article class="servipag-payment '+(confirmed?"":"servipag-payment-pending")+'">'+inner+'</article>';
+  };
+  html+=verified.map(g=>renderGroup(g,true)).join("");
+  if(pending.length){
+    html+='<div class="servipag-pending-head"><h3>Pendientes de conciliación</h3>'+
+      '<p class="subtle">Estas cuentas tienen desglose de Servipag, pero no una salida bancaria confirmada. '+
+      'Se muestran solo como referencia y no se suman a los pagos confirmados ni al dinero que salió de tus cuentas.</p></div>';
+    html+=pending.map(g=>renderGroup(g,false)).join("");
   }
-  const state=servipagEstado||{};
-  if(state.erroresDeFormato){
-    html+='<p class="subtle">Hay '+Number(state.erroresDeFormato)+
-      ' correo(s) de Servipag cuyo desglose aún no se pudo verificar; no se han registrado importes estimados.</p>';
+  if(!groups.length){
+    html='<p class="empty">Aún no hay pagos Servipag identificados desde el inicio de este período de sueldo.</p>';
   }
-  if(!html && (state.encontrados||state.pendientes||state.error)){
-    html='<h3>Servipag</h3><p class="subtle">'+escapeHtml(state.error||
-      'Hay comprobantes que todavía necesitan una coincidencia bancaria verificable.')+'</p>';
+  if((servipagEstado||{}).erroresDeFormato){
+    html+='<p class="subtle">Existen comprobantes adicionales que requieren revisión de formato. No se suman importes sin verificar.</p>';
   }
   box.innerHTML=html;
-  box.classList.toggle("hidden",!html);
 }
 
 function renderSummary(){
