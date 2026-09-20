@@ -75,6 +75,10 @@ select option{background:#242429;color:white}
 .statement-list{display:grid;gap:11px;margin-bottom:15px}
 .statement-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-2);padding:15px;border-radius:15px}
 .statement-item>div{min-width:0}.statement-item>strong{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px}
+.statement-item.is-empty{opacity:.72}
+.statement-item.is-paid{border:1px solid rgba(69,196,126,.20)}
+.statement-item.is-paid .statement-state{color:#63d494;font-weight:720}
+.statement-item.is-pending .statement-state{color:#f0bd63;font-weight:720}
 .statement-import{border-top:1px solid var(--line);padding-top:15px}
 .statement-import>summary{color:#9bc3ff}
 .statement-import input[type="file"]{font-size:13px}
