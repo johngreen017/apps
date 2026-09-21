@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Revisor de Cargo Fiscal</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, Arial, sans-serif;
+      --verde: #184e38;
+      --verde-claro: #d8eedf;
+      --fondo: #f4f6f5;
+      --borde: #d7ded9;
+      --texto: #17251d;
+      --rojo: #a83232;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--fondo); color: var(--texto); }
+    button, input { font: inherit; }
+    .contenedor { width: min(1400px, 100%); margin: 0 auto; padding: 16px; }
+    .encabezado {
+      background: var(--verde); color: white; text-align: center;
+      padding: 20px; border-radius: 14px; box-shadow: 0 5px 18px rgba(24,78,56,.2);
+    }
+    .encabezado h1 { margin: 0; font-size: clamp(1.35rem, 4vw, 2rem); }
+    .encabezado p { margin: 6px 0 0; color: var(--verde-claro); }
+    .barra {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      margin: 16px 0; padding: 14px; background: white; border: 1px solid var(--borde);
+      border-radius: 12px;
+    }
+    .archivo { flex: 1 1 320px; }
+    input[type=file] { width: 100%; padding: 12px; border: 1px dashed #789184; border-radius: 9px; background: #fbfdfb; }
+    .accion {
+      min-height: 46px; border: 0; border-radius: 9px; padding: 0 18px;
+      font-weight: 700; cursor: pointer;
+    }
+    .primaria { background: var(--verde); color: white; }
+    .secundaria { background: #e7ece9; color: #243c30; }
+    .peligro { background: #f8e7e7; color: #8b2525; }
+    .accion:disabled { opacity: .45; cursor: not-allowed; }
+    .metricas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .metrica { background: white; border: 1px solid var(--borde); border-radius: 12px; padding: 15px; text-align: center; }
+    .metrica strong { display: block; font-size: 1.65rem; color: var(--verde); }
+    .columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .panel { background: white; border: 1px solid var(--borde); border-radius: 14px; padding: 14px; min-height: 220px; }
+    .panel h2 { margin: 0 0 4px; font-size: 1.1rem; }
+    .panel p { margin: 0 0 12px; color: #66756d; font-size: .9rem; }
+    .lista { display: grid; gap: 8px; max-height: 58vh; overflow: auto; padding-right: 3px; }
+    .item {
+      width: 100%; min-height: 54px; padding: 12px; text-align: left; cursor: pointer;
+      border: 1px solid var(--borde); border-radius: 9px; background: #fbfcfb;
+      line-height: 1.35; overflow-wrap: anywhere;
+    }
+    .item:hover { border-color: var(--verde); background: #f2f8f4; }
+    .vacio { color: #77847d; text-align: center; padding: 30px 12px; border: 1px dashed var(--borde); border-radius: 9px; }
+    .estado { min-height: 24px; margin: 10px 2px 0; color: #5f6d65; }
+    @media (max-width: 720px) {
+      .contenedor { padding: 10px; }
+      .metricas { gap: 7px; }
+      .metrica { padding: 10px 4px; font-size: .78rem; }
+      .metrica strong { font-size: 1.35rem; }
+      .columnas { grid-template-columns: 1fr; }
+      .lista { max-height: none; }
+      .barra .accion { flex: 1 1 140px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="encabezado">
+      <h1>REVISOR DE CARGO FISCAL</h1>
+      <p>Control de Inventario y Contrastación Institucional</p>
+    </header>
+
+    <section class="barra" aria-label="Carga y acciones">
+      <label class="archivo">
+        <strong>📂 Seleccionar planilla Excel</strong>
+        <input id="archivo" type="file" accept=".xlsx,.xls">
+      </label>
+      <button id="descargar" class="accion primaria" type="button" disabled>💾 Descargar contraste</button>
+      <button id="reiniciar" class="accion peligro" type="button" disabled>Reiniciar revisión</button>
+    </section>
+
+    <section class="metricas" aria-label="Resumen">
+      <div class="metrica"><strong id="total">0</strong>Total cargo</div>
+      <div class="metrica"><strong id="cantidadPendientes">0</strong>Pendientes</div>
+      <div class="metrica"><strong id="cantidadRevisados">0</strong>Constatados</div>
+    </section>
+
+    <section class="columnas">
+      <article class="panel">
+        <h2>🔴 PENDIENTES</h2>
+        <p>Toca un elemento para marcarlo como constatado.</p>
+        <div id="pendientes" class="lista"></div>
+      </article>
+      <article class="panel">
+        <h2>🟢 REVISADOS / CONSTATADOS</h2>
+        <p>Toca un elemento para devolverlo a pendientes.</p>
+        <div id="revisados" class="lista"></div>
+      </article>
+    </section>
+    <p id="estado" class="estado" role="status"></p>
+  </main>
+
+  <script>
+    const CLAVE = 'revisorCargoFiscal.v1';
+    let datos = cargarEstado() || { nombreArchivo: '', columnas: [], pendientes: [], revisados: [] };
+
+    const archivo = document.getElementById('archivo');
+    const pendientesEl = document.getElementById('pendientes');
+    const revisadosEl = document.getElementById('revisados');
+    const estadoEl = document.getElementById('estado');
+    const descargarBtn = document.getElementById('descargar');
+    const reiniciarBtn = document.getElementById('reiniciar');
+
+    archivo.addEventListener('change', importarExcel);
+    descargarBtn.addEventListener('click', descargarExcel);
+    reiniciarBtn.addEventListener('click', reiniciar);
+
+    function cargarEstado() {
+      try { return JSON.parse(localStorage.getItem(CLAVE)); } catch (_) { return null; }
+    }
+
+    function guardarEstado() {
+      localStorage.setItem(CLAVE, JSON.stringify(datos));
+    }
+
+    async function importarExcel(evento) {
+      const seleccionado = evento.target.files[0];
+      if (!seleccionado) return;
+      try {
+        estadoEl.textContent = 'Leyendo planilla…';
+        const buffer = await seleccionado.arrayBuffer();
+        const libro = XLSX.read(buffer, { type: 'array', cellDates: true });
+        const hoja = libro.Sheets[libro.SheetNames[0]];
+        const filas = XLSX.utils.sheet_to_json(hoja, { defval: '' });
+        if (!filas.length) throw new Error('La primera hoja no contiene registros.');
+        datos = {
+          nombreArchivo: seleccionado.name,
+          columnas: Object.keys(filas[0]),
+          pendientes: filas.map((fila, indice) => ({ id: indice + 1, fila })),
+          revisados: []
+        };
+        guardarEstado();
+        estadoEl.textContent = 'Planilla cargada: ' + seleccionado.name;
+        renderizar();
+      } catch (error) {
+        estadoEl.textContent = 'No fue posible leer el archivo: ' + error.message;
+      } finally {
+        archivo.value = '';
+      }
+    }
+
+    function detalle(item) {
+      return datos.columnas
+        .filter(columna => item.fila[columna] !== '' && item.fila[columna] != null)
+        .map(columna => columna + ': ' + formatear(item.fila[columna]))
+        .join(' | ');
+    }
+
+    function formatear(valor) {
+      if (valor instanceof Date) return valor.toLocaleDateString('es-CL');
+      return String(valor);
+    }
+
+    function mover(id, origen) {
+      const desde = datos[origen];
+      const destino = origen === 'pendientes' ? datos.revisados : datos.pendientes;
+      const indice = desde.findIndex(item => item.id === id);
+      if (indice < 0) return;
+      destino.push(desde.splice(indice, 1)[0]);
+      guardarEstado();
+      renderizar();
+    }
+
+    function crearItem(item, origen) {
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'item';
+      boton.textContent = (origen === 'pendientes' ? '▫️ ' : '✅ ') + detalle(item);
+      boton.addEventListener('click', () => mover(item.id, origen));
+      return boton;
+    }
+
+    function pintarLista(elemento, items, origen, mensaje) {
+      elemento.replaceChildren();
+      if (!items.length) {
+        const vacio = document.createElement('div');
+        vacio.className = 'vacio';
+        vacio.textContent = mensaje;
+        elemento.appendChild(vacio);
+        return;
+      }
+      items.forEach(item => elemento.appendChild(crearItem(item, origen)));
+    }
+
+    function renderizar() {
+      const total = datos.pendientes.length + datos.revisados.length;
+      document.getElementById('total').textContent = total;
+      document.getElementById('cantidadPendientes').textContent = datos.pendientes.length;
+      document.getElementById('cantidadRevisados').textContent = datos.revisados.length;
+      descargarBtn.disabled = total === 0;
+      reiniciarBtn.disabled = total === 0;
+      pintarLista(pendientesEl, datos.pendientes, 'pendientes', 'No hay elementos pendientes.');
+      pintarLista(revisadosEl, datos.revisados, 'revisados', 'Aún no hay elementos constatados.');
+      if (total && datos.nombreArchivo) estadoEl.textContent = 'Revisión activa: ' + datos.nombreArchivo;
+    }
+
+    function descargarExcel() {
+      const salida = [];
+      datos.pendientes.forEach(item => salida.push(Object.assign({}, item.fila, { Estado: 'Pendiente' })));
+      datos.revisados.forEach(item => salida.push(Object.assign({}, item.fila, { Estado: 'Constatado' })));
+      const hoja = XLSX.utils.json_to_sheet(salida, { header: datos.columnas.concat('Estado') });
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, 'Contrastación');
+      XLSX.writeFile(libro, 'Cargo_Fiscal_Constatado.xlsx');
+    }
+
+    function reiniciar() {
+      if (!confirm('¿Deseas borrar la revisión actual y cargar una nueva planilla?')) return;
+      localStorage.removeItem(CLAVE);
+      datos = { nombreArchivo: '', columnas: [], pendientes: [], revisados: [] };
+      estadoEl.textContent = 'Revisión reiniciada.';
+      renderizar();
+    }
+
+    renderizar();
+  </script>
+</body>
+</html>
