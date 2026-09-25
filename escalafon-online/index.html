@@ -7,12 +7,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Escalafón">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons-v3/icon-64.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons-v3/icon-180.png?v=3">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons-v3/icon-167.png?v=3">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons-v3/icon-152.png?v=3">
+  <link rel="apple-touch-icon" sizes="120x120" href="icons-v3/icon-120.png?v=3">
+  <link rel="manifest" href="manifest.webmanifest?v=3">
   <title>Escalafón Online</title>
   <meta name="description" content="Acceso oficial a Escalafón Online">
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <style>
     *{box-sizing:border-box}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#eaf0ec}
@@ -47,15 +49,60 @@
     let oneSignalReady = false;
     let oneSignalSdk = null;
     let appMessageSource = null;
+    const ADMIN_DEVICE_STORAGE = 'apps.admin.device.v1';
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      oneSignalSdk = OneSignal;
-      await OneSignal.init({appId: '0956c8db-37fb-4a11-98bd-397d121ae8fa'});
-      oneSignalReady = true;
-      await updatePushButton();
-      await shareSubscription();
+    function stableAdminDeviceKey() {
+      try {
+        let key = localStorage.getItem(ADMIN_DEVICE_STORAGE);
+        if (!key) {
+          const bytes = crypto.getRandomValues(new Uint8Array(32));
+          key = Array.from(bytes, b => b.toString(16).padStart(2,'0')).join('');
+          localStorage.setItem(ADMIN_DEVICE_STORAGE,key);
+        }
+        if (!/^[a-f0-9]{64}$/.test(key)) throw new Error('invalid');
+        const ua=navigator.userAgent||'';
+        const ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+        const mobile=ipad||/Mobi|Android|iPhone|iPod/i.test(ua);
+        return (mobile?'mobile':'desktop')+':'+key;
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function shareStableDevice() {
+      const device=stableAdminDeviceKey();
+      if (device && appFrame.contentWindow) {
+        appFrame.contentWindow.postMessage({type:'escalafon-device-key',device},'*');
+      }
+    }
+
+    appFrame.addEventListener('load', function() {
+      [0,80,250,700].forEach(delay=>setTimeout(shareStableDevice,delay));
     });
+
+    let oneSignalLoading = false;
+    function ensureOneSignal() {
+      if (oneSignalReady || oneSignalLoading || !ownerSession) return;
+      oneSignalLoading = true;
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        oneSignalSdk = OneSignal;
+        await OneSignal.init({
+          appId: '0956c8db-37fb-4a11-98bd-397d121ae8fa',
+          serviceWorkerParam: { scope: '/apps/escalafon-online/' },
+          serviceWorkerPath: '/apps/escalafon-online/OneSignalSDKWorker.js'
+        });
+        oneSignalReady = true;
+        oneSignalLoading = false;
+        await updatePushButton();
+        await shareSubscription();
+      });
+      const script = document.createElement('script');
+      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      script.defer = true;
+      script.onerror = function() { oneSignalLoading = false; };
+      document.head.appendChild(script);
+    }
 
     window.addEventListener('message', async function(event) {
       let trustedGoogleOrigin = false;
@@ -63,16 +110,22 @@
         const hostname = new URL(event.origin).hostname;
         trustedGoogleOrigin = event.origin === 'https://script.google.com' || hostname === 'googleusercontent.com' || hostname.endsWith('.googleusercontent.com');
       } catch (error) {}
-      if (!trustedGoogleOrigin || !event.data) return;
+      if (!trustedGoogleOrigin || event.source!==appFrame.contentWindow || !event.data) return;
+      if (event.data.type === 'escalafon-request-device-key') {
+        appMessageSource = event.source;
+        shareStableDevice();
+      }
       if (event.data.type === 'escalafon-owner-session') {
         appMessageSource = event.source;
         ownerSession = event.data.owner === true;
+        if (ownerSession) ensureOneSignal();
         await updatePushButton();
         if (ownerSession) await shareSubscription();
       }
       if (event.data.type === 'escalafon-enable-push') {
         appMessageSource = event.source;
         ownerSession = true;
+        ensureOneSignal();
         await activatePush();
       }
     });

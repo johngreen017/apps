@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Simulador">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#173d2b">
+  <meta name="description" content="Simulador de Remuneraciones">
+
+  <!-- Ícono oficial del Simulador, alojado en el único repositorio público apps. -->
+  <link rel="apple-touch-icon" sizes="192x192" href="https://johngreen017.github.io/apps/simulador-remuneraciones/icono-simulador-v6.png">
+  <link rel="apple-touch-icon-precomposed" href="https://johngreen017.github.io/apps/simulador-remuneraciones/icono-simulador-v6.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="https://johngreen017.github.io/apps/simulador-remuneraciones/icono-simulador-v6.png">
+  <link rel="shortcut icon" type="image/png" href="https://johngreen017.github.io/apps/simulador-remuneraciones/icono-simulador-v6.png">
+  <link rel="manifest" href="https://johngreen017.github.io/apps/simulador-remuneraciones/manifest.webmanifest?v=6">
+
+
+  <style>
+    *, *::before, *::after { 
+      box-sizing: border-box !important;
+      -webkit-tap-highlight-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      width: 100% !important;
+      height: 100%;
+      background: #f3f5f3;
+    }
+
+    body {
+      width: 100% !important;
+      max-width: 100vw !important;
+      min-height: 100%;
+      overflow-x: hidden !important;
+      touch-action: pan-y;
+      -webkit-text-size-adjust: 100%;
+      background: #f3f5f3;
+      color: #1f2923;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 0 10px calc(25px + env(safe-area-inset-bottom));
+    }
+
+    /* Margen superior para despejar Isla Dinámica, Notch y Barra de Estado */
+    .contenedor {
+      width: 100% !important;
+      max-width: 960px;
+      margin: 0 auto;
+      margin-top: max(75px, calc(30px + env(safe-area-inset-top))) !important;
+    }
+
+    .encabezado {
+      background: #173d2b;
+      color: #ffffff;
+      padding: 18px 14px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+      width: 100%;
+    }
+
+    .encabezado h1 {
+      font-size: clamp(17px, 4.2vw, 26px);
+      letter-spacing: 0.5px;
+      line-height: 1.25;
+    }
+
+    .panel {
+      background: #ffffff;
+      padding: 14px;
+      border: 1px solid #cbd4cd;
+      border-top: 0;
+      width: 100%;
+    }
+
+    /* 1 Columna en Vertical */
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    /* 2 Columnas en Horizontal o Pantallas Grandes */
+    @media (orientation: landscape) and (min-width: 580px), (min-width: 768px) {
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 20px;
+      }
+      .panel {
+        padding: 20px 24px;
+      }
+    }
+
+    .campo {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #173d2b;
+    }
+
+    input, select, button {
+      display: block;
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 44px;
+      border: 1px solid #cbd4cd;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 16px !important;
+      background-color: #ffffff;
+      color: #1f2923;
+    }
+
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    button {
+      margin-top: 14px;
+      background: #173d2b;
+      color: #ffffff;
+      border: 0;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    button:active {
+      opacity: 0.85;
+      transform: scale(0.99);
+    }
+
+    .oculto { display: none !important; }
+
+    .estado {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    .estado.ok {
+      display: block;
+      background: #e5f1e7;
+      color: #173d2b;
+    }
+
+    .estado.error {
+      display: block;
+      background: #fde7e5;
+      color: #9c0006;
+    }
+
+    .resultado {
+      display: none;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .tarjetas-principales {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    @media (min-width: 600px) {
+      .tarjetas-principales {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .tarjeta-principal {
+      background: #ffffff;
+      border: 2px solid #173d2b;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .tarjeta-principal small {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .tarjeta-principal strong {
+      color: #173d2b;
+      font-size: 18px;
+    }
+
+    .tarjetas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    @media (min-width: 768px) {
+      .tarjetas {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .tarjeta {
+      background: #e1ebe3;
+      border: 1px solid #cbd4cd;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .tarjeta small {
+      display: block;
+      margin-bottom: 2px;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .tarjeta strong { font-size: 13px; }
+
+    .seccion {
+      margin-bottom: 14px;
+      background: #ffffff;
+      border: 1px solid #cbd4cd;
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .seccion h2 {
+      padding: 8px 10px;
+      background: #173d2b;
+      color: #ffffff;
+      font-size: 13px;
+    }
+
+    .tabla-scroll { 
+      width: 100% !important;
+      overflow-x: auto !important; 
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      min-width: 300px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid #e4e9e5;
+      text-align: left;
+      font-size: 12px;
+    }
+
+    th { background: #eef3ef; }
+
+    .valor {
+      text-align: right;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .liquido {
+      color: #173d2b;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    footer {
+      padding: 12px;
+      background: #173d2b;
+      color: #ffffff;
+      text-align: center;
+      border-radius: 0 0 12px 12px;
+      font-size: 12px;
+    }
+
+    /* Modal de Acceso */
+    .bloqueo-acceso {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 99999;
+      background: rgba(23, 61, 43, 0.85);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .bloqueo-acceso.oculto { display: none !important; }
+
+    .acceso-card {
+      width: 100%;
+      max-width: 360px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 18px 14px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .acceso-card h2 {
+      margin-bottom: 6px;
+      color: #173d2b;
+      font-size: 17px;
+    }
+
+    .acceso-card p { 
+      line-height: 1.35; 
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .boton-secundario {
+      background: #ffffff;
+      color: #173d2b;
+      border: 1px solid #173d2b;
+      margin-top: 8px;
+    }
+
+    .form-acceso {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .form-acceso label {
+      margin-bottom: 2px;
+      font-weight: 600;
+      color: #173d2b;
+      font-size: 12px;
+    }
+
+    .datos-acceso {
+      margin: 10px 0;
+      padding: 8px;
+      border-radius: 6px;
+      background: #e7eee8;
+      text-align: left;
+      line-height: 1.4;
+      font-size: 12px;
+    }
+
+    .ayuda-campo {
+      margin-top: 3px;
+      color: #5f6d64;
+      font-size: 11px;
+    }
+    .admin-accesos { margin: 0 0 14px; padding: 12px; border: 1px solid #cbd4cd; border-radius: 8px; background: #eef3ef; }
+    .admin-accesos h2 { margin: 0 0 8px; color: #173d2b; font-size: 15px; }
+    .admin-usuario { padding: 9px 0; border-bottom: 1px solid #cbd4cd; font-size: 12px; line-height: 1.45; }
+    .admin-usuario:last-child { border-bottom: 0; }
+    .admin-acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .admin-acciones button { width: auto !important; min-height: 36px; margin: 0; padding: 6px 9px; font-size: 12px !important; }
+    .admin-bar { margin-bottom: 12px; }
+    .admin-bar button { margin: 0; }
+    footer small { display:block; margin-top:4px; color:#d7e9df; font-size:11px; }
+
+    /* Diseño de ingreso unificado con Escalafón. Solo afecta al modal de acceso. */
+    .bloqueo-acceso{position:fixed;inset:0;z-index:99999;background:rgba(20,63,46,.85);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+    .acceso-card{background:#fff;border-radius:16px;width:560px;max-width:100%;padding:28px 24px;box-shadow:0 15px 45px #122c3240;max-height:calc(100dvh - 40px);overflow:auto;color:#173d2b;text-align:left}
+    .acceso-card h2{text-align:center;font-size:24px;margin:0 0 12px;color:#173d2b;font-weight:700}
+    .acceso-card > p{text-align:center;line-height:1.45;margin:0 0 20px;color:#173d2b;font-size:16px}
+    .acceso-card .access-tabs{display:flex;gap:12px;margin:20px 0}
+    .acceso-card .access-tabs button{flex:1;background:#e7eee8;color:#173d2b;border:0;border-radius:8px;font-size:16px!important;font-weight:600;min-height:44px;margin:0;padding:11px 13px;cursor:pointer}
+    .acceso-card .access-tabs button.selected{background:#173d2b;color:#fff}
+    .acceso-card .form-acceso label{display:block;font-size:16px;font-weight:600;color:#173d2b;margin:0 0 7px}
+    .acceso-card .form-acceso input{display:block;width:100%!important;min-width:0!important;font-size:20px!important;min-height:58px;border:1px solid #b9cdc1;background:#fff;color:#19372e;border-radius:8px;padding:11px 13px;margin:0 0 16px}
+    .acceso-card .form-acceso > button{display:block;width:100%!important;min-height:60px;margin:12px 0 0;padding:11px 13px;border:1px solid #173d2b;border-radius:8px;background:#173d2b;color:#fff;font-size:20px!important;font-weight:700;cursor:pointer}
+    .acceso-card .form-acceso > div{width:100%}
+    .acceso-card .form-acceso > button:disabled{opacity:.5;cursor:wait}
+    @media(max-width:600px){.acceso-card{padding:24px 18px}.acceso-card .access-tabs{gap:8px}.acceso-card .access-tabs button{font-size:14px!important;padding:12px 8px}.acceso-card h2{font-size:21px}}
+    /* Gestión de accesos en vista exclusiva, armonizada con Escalafón. */
+    body.admin-access-open{overflow:hidden!important}
+    #panelGestionAccesos.admin-access-overlay{position:fixed!important;inset:0!important;z-index:99998!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))!important;background:#eef3ef!important;border:0!important;border-radius:0!important;overflow:auto!important}
+    #panelGestionAccesos.admin-access-overlay.oculto{display:none!important}
+    #panelGestionAccesos .admin-access-modal{width:min(1120px,100%);max-height:calc(100dvh - 36px);overflow:auto;background:#fff;border:1px solid #d5e2da;border-radius:20px;padding:26px 32px 30px;box-shadow:0 20px 55px rgba(18,62,48,.18);color:#19372e}
+    #panelGestionAccesos .admin-access-header{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;margin:0 0 14px;padding:0 128px 14px;border-bottom:1px solid #e1e9e4}
+    #panelGestionAccesos .admin-access-header h2{width:100%;margin:0!important;text-align:center!important;color:#123e30!important;font-size:26px!important;line-height:1.2!important;font-weight:750!important}
+    #panelGestionAccesos .admin-access-close{position:absolute;right:0;top:0;display:inline-flex!important;align-items:center;justify-content:center;width:auto!important;min-width:96px!important;max-width:118px!important;min-height:44px!important;margin:0!important;padding:9px 18px!important;border:1px solid #b8cabe!important;border-radius:9px!important;background:#fff!important;color:#164b38!important;font-size:15px!important;font-weight:700!important;box-shadow:none!important}
+    #panelGestionAccesos .admin-access-close:active{transform:none}
+    #panelGestionAccesos .admin-access-help{max-width:820px;margin:0 auto 24px;text-align:center;font-size:16px;line-height:1.5;color:#60796f}
+    #panelGestionAccesos #formAgregarAcceso{padding:18px 20px 20px;border:1px solid #e0e8e3;border-radius:14px;background:#f8faf8}
+    #panelGestionAccesos #estadoGestionAccesos{margin:12px 0}
+    #panelGestionAccesos #listaAccesos{margin-top:22px;padding-top:4px}
+    @media(max-width:700px){
+      /* El modo app de iPhone puede informar safe-area-inset-top=0: reservar
+         también espacio físico para reloj, Isla Dinámica y barra de estado. */
+      #panelGestionAccesos.admin-access-overlay{
+        --admin-top-space:max(76px, calc(env(safe-area-inset-top, 0px) + 16px));
+        --admin-bottom-space:max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+        align-items:flex-start!important;
+        justify-content:center!important;
+        height:100dvh!important;
+        max-height:100dvh!important;
+        padding:var(--admin-top-space) 12px var(--admin-bottom-space)!important;
+        overflow:hidden!important;
+      }
+      #panelGestionAccesos .admin-access-modal{
+        flex:0 1 auto;
+        max-height:calc(100dvh - var(--admin-top-space) - var(--admin-bottom-space))!important;
+        min-height:0;
+        overflow-y:auto;
+        -webkit-overflow-scrolling:touch;
+        padding:18px 14px 22px;
+        border-radius:14px;
+      }
+      #panelGestionAccesos .admin-access-header{min-height:48px;margin-bottom:12px;padding:0 92px 12px}
+      #panelGestionAccesos .admin-access-header h2{font-size:21px!important}
+      #panelGestionAccesos .admin-access-close{min-width:76px!important;max-width:84px!important;min-height:40px!important;padding:7px 11px!important;font-size:14px!important}
+      #panelGestionAccesos .admin-access-help{font-size:14px;margin-bottom:18px}
+      #panelGestionAccesos #formAgregarAcceso{padding:14px 12px 16px}
+    }
+  </style>
+</head>
+
+<body>
+  <main class="contenedor">
+    <header class="encabezado">
+      <h1>SIMULADOR DE REMUNERACIONES</h1>
+    </header>
+
+    <section class="panel">
+      <div class="admin-bar"><button class="boton-secundario" type="button" onclick="cambiarCuentaSimulador()">CAMBIAR CUENTA</button></div>
+      <div id="adminBar" class="admin-bar oculto">
+        <button id="botonGestionarAccesos" type="button" onclick="alternarGestionAccesos()">GESTIONAR ACCESOS</button>
+      </div>
+      <section id="panelGestionAccesos" class="admin-accesos admin-access-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="tituloGestionAccesos"><div class="admin-access-modal">
+        <div class="admin-access-header"><h2 id="tituloGestionAccesos">Accesos autorizados</h2><button class="boton-secundario admin-access-close" type="button" onclick="cerrarGestionAccesos()">Cerrar</button></div>
+        <p class="admin-access-help">Autoriza solicitudes o agrega usuarios directamente. Cada cuenta admite 1 móvil/tablet y 1 computador.</p>
+        <form id="formAgregarAcceso" onsubmit="agregarAccesoDirecto(event)">
+          <label for="nombreNuevoAcceso">Nombre y apellido</label>
+          <input id="nombreNuevoAcceso" required minlength="3" maxlength="100" autocomplete="off">
+          <label for="correoNuevoAcceso">Correo electrónico</label>
+          <input id="correoNuevoAcceso" type="email" required autocomplete="off">
+          <button type="submit">GUARDAR ACCESO</button>
+        </form>
+        <p id="estadoGestionAccesos" role="status"></p>
+        <button class="boton-secundario" type="button" onclick="cargarGestionAccesos()">ACTUALIZAR SOLICITUDES</button>
+        <div id="listaAccesos"></div>
+      </div></section>
+      <div class="grid">
+        <div class="campo">
+          <label for="fechaConsulta">Fecha a consultar</label>
+          <input type="date" id="fechaConsulta">
+        </div>
+
+        <div class="campo">
+          <label for="fechaIngreso">Fecha de ingreso a la institución</label>
+          <input type="date" id="fechaIngreso">
+        </div>
+
+        <div class="campo">
+          <label for="grado">Grado</label>
+          <select id="grado" onchange="actualizarOpciones()">
+            <option value="Subteniente">Subteniente</option>
+            <option value="Teniente">Teniente</option>
+            <option value="Capitán">Capitán</option>
+            <option value="Mayor" selected>Mayor</option>
+            <option value="Teniente Coronel">Teniente Coronel</option>
+            <option value="Coronel">Coronel</option>
+            <option value="General">General</option>
+            <option value="General Inspector">General Inspector</option>
+            <option value="General Director">General Director</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="cargasFamiliares">Cantidad de cargas familiares</label>
+          <select id="cargasFamiliares">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+
+        <div class="campo" id="campoEsGraduado">
+          <label for="esGraduado">¿Es Oficial Graduado?</label>
+          <select id="esGraduado" onchange="actualizarOpciones()">
+            <option value="No">No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </div>
+
+        <div class="campo" id="campoSobresueldo">
+          <label for="sobresueldo">Sobresueldo</label>
+          <select id="sobresueldo" onchange="actualizarOpciones()">
+            <option value="Ninguno">Ninguno</option>
+            <option value="Especialidad">Especialidad (35%)</option>
+            <option value="Título profesional">S.S. Título Profesional (35%)</option>
+          </select>
+        </div>
+
+        <div class="campo" id="campoAsignacionPolicial">
+          <label for="asignacionPolicial">¿Percibe Asignación Policial (35%)?</label>
+          <select id="asignacionPolicial">
+            <option value="No">No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="porcentajeZona">Porcentaje de zona</label>
+          <input type="number" id="porcentajeZona" min="0" step="1" value="0">
+        </div>
+
+        <div class="campo">
+          <label for="ocupaCasaFiscal">¿Ocupa casa fiscal?</label>
+          <select id="ocupaCasaFiscal" onchange="actualizarCasaFiscal()">
+            <option value="No">No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="correspondeCasa">¿Le corresponde asignación de casa?</label>
+          <select id="correspondeCasa">
+            <option value="No">No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </div>
+
+        <div class="campo" id="campoUnidadCOP">
+          <label for="unidadCOP">¿Pertenece a Unidad COP?</label>
+          <select id="unidadCOP">
+            <option value="No">No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </div>
+
+        <div class="campo campo-descuentos">
+          <label for="descuentosParticulares">Descuentos particulares</label>
+          <input type="number" id="descuentosParticulares" min="0" step="1" value="0" inputmode="numeric">
+          <div class="ayuda-campo">(Ingresar total registrado en última liquidación)</div>
+        </div>
+      </div>
+
+      <button id="botonCalcular" type="button" onclick="calcular()">
+        CALCULAR REMUNERACIÓN
+      </button>
+
+      <div id="estado" class="estado"></div>
+
+      <section id="resultado" class="resultado">
+        <div id="tarjetasPrincipales" class="tarjetas-principales"></div>
+        <div id="tarjetas" class="tarjetas"></div>
+
+        <div class="seccion">
+          <h2>Detalle de haberes</h2>
+          <div class="tabla-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Letra</th>
+                  <th>Concepto</th>
+                  <th class="valor">Valor</th>
+                </tr>
+              </thead>
+              <tbody id="tablaHaberes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2>Detalle de descuentos</h2>
+          <div class="tabla-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Concepto</th>
+                  <th>Origen</th>
+                  <th class="valor">Valor</th>
+                </tr>
+              </thead>
+              <tbody id="tablaDescuentos"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2>Resumen</h2>
+          <div class="tabla-scroll">
+            <table>
+              <tbody id="tablaResumen"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <footer>
+      &copy; J.R.G.C. 2026 &mdash; Todos los derechos reservados.
+      <small>Última actualización de la aplicación: 23-09-2026, 20:30 hrs.</small>
+    </footer>
+  </main>
+
+  <!-- Modal de control de acceso -->
+  <div id="bloqueoAcceso" class="bloqueo-acceso">
+    <div class="acceso-card">
+      <h2 id="tituloAcceso">ACCESO AL SIMULADOR</h2>
+      <p id="mensajeAcceso">Ingresa tus datos. La solicitud quedará pendiente de autorización.</p>
+
+      <div class="access-tabs" role="group" aria-label="Opciones de acceso">
+        <button id="tabSolicitar" type="button" onclick="mostrarVista('solicitar')" class="selected" aria-pressed="true">
+          Solicitar Acceso
+        </button>
+        <button id="tabIngresar" type="button" onclick="mostrarVista('ingresar')" aria-pressed="false">
+          Ya estoy Autorizado
+        </button>
+      </div>
+
+      <div id="formularioAcceso" class="form-acceso">
+        <div>
+          <label for="nombreSolicitante">Nombre y Apellido</label>
+          <input type="text" id="nombreSolicitante" autocomplete="name" placeholder="Ej: Juan Pérez">
+        </div>
+        <div>
+          <label for="correoSolicitante">Correo electrónico</label>
+          <input type="email" id="correoSolicitante" autocomplete="email" placeholder="correo@ejemplo.com">
+        </div>
+        <button id="botonSolicitarAcceso" type="button" onclick="solicitarAccesoUsuario()">
+          ENVIAR SOLICITUD
+        </button>
+      </div>
+
+      <div id="formularioRecuperar" class="form-acceso oculto">
+        <div>
+          <label for="correoRecuperar">Ingresa tu correo autorizado</label>
+          <input type="email" id="correoRecuperar" autocomplete="email" placeholder="correo@ejemplo.com" oninput="actualizarClaveAdministrador()">
+        </div>
+        <div id="bloqueClaveAdmin" class="oculto">
+          <label for="claveAdministrador">Contraseña de administrador</label>
+          <input type="password" id="claveAdministrador" autocomplete="current-password">
+          <div class="ayuda-campo">Se solicita solo al registrar este dispositivo por primera vez.</div>
+        </div>
+        <button id="botonRecuperar" type="button" onclick="recuperarAccesoUsuario()">
+          INGRESAR AL SIMULADOR
+        </button>
+      </div>
+      <div id="datosAcceso" class="datos-acceso oculto"></div>
+
+      <button id="botonRevisarAcceso" class="boton-secundario oculto" type="button" onclick="comprobarAccesoUsuario()">
+        REVISAR AUTORIZACIÓN
+      </button>
+
+      <button id="botonNuevaSolicitud" class="boton-secundario oculto" type="button" onclick="nuevaSolicitudAcceso()">
+        VOLVER AL INICIO
+      </button>
+
+      <div id="estadoAcceso" class="estado"></div>
+    </div>
+  </div>
+
+  <script>
+    // Tu nueva implementación activa en Google Apps Script
+    const API_URL = "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec";
+    const CLAVE_ACCESO = "simuladorRemuneracionesAcceso";
+    const ADMIN_EMAIL = "john.green017@gmail.com";
+    const CLAVE_ADMIN_RECORDADO = "simulador.admin.recordado.v1";
+    let SESION_ADMIN = null;
+
+    function deviceKey() {
+      try {
+        let key = localStorage.getItem('apps.admin.device.v1');
+        if (!key) {
+          const bytes = crypto.getRandomValues(new Uint8Array(32));
+          key = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+          localStorage.setItem('apps.admin.device.v1',key);
+        }
+        if (!/^[a-f0-9]{64}$/.test(key)) throw new Error("invalid");
+        const ua = navigator.userAgent || "";
+        const ipad = /iPad/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        const mobile = ipad || /Mobi|Android|iPhone|iPod/i.test(ua);
+        return (mobile ? "mobile" : "desktop") + ":" + key;
+      } catch (e) {
+        throw new Error("Habilita el almacenamiento del navegador y evita el modo privado para vincular este dispositivo.");
+      }
+    }
+
+    function accesoActual_() { return leerAccesoLocal_() || {}; }
+    function esAdministradorActual_() { return !!accesoActual_().owner; }
+    function aplicarVistaAdministrador_() {
+      document.getElementById("adminBar").classList.toggle("oculto", !esAdministradorActual_());
+      if (!esAdministradorActual_()) { document.getElementById("panelGestionAccesos").classList.add("oculto"); document.body.classList.remove("admin-access-open"); }
+    }
+
+    async function ejecutarApiGAS(accion, payload = {}) {
+      const respuesta = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ accion, ...payload })
+      });
+      const json = await respuesta.json();
+      if (!json.ok) throw new Error(json.error);
+      return json.data;
+    }
+
+    function leerAccesoLocal_() {
+      if(SESION_ADMIN)return SESION_ADMIN;
+      try {
+        const saved=JSON.parse(localStorage.getItem(CLAVE_ACCESO) || "null");
+        if(saved&&saved.owner){localStorage.removeItem(CLAVE_ACCESO);return null;}
+        if(saved&&String(saved.email||"").trim().toLowerCase()===ADMIN_EMAIL){
+          localStorage.removeItem(CLAVE_ACCESO);
+          localStorage.setItem(CLAVE_ADMIN_RECORDADO,ADMIN_EMAIL);
+          return null;
+        }
+        return saved;
+      } catch (e) { return null; }
+    }
+
+    function adminRecordado_(){try{return localStorage.getItem(CLAVE_ADMIN_RECORDADO)===ADMIN_EMAIL;}catch(e){return false;}}
+    function guardarAccesoLocal_(datos) {
+      if(datos&&datos.owner){
+        SESION_ADMIN=datos;
+        localStorage.setItem(CLAVE_ADMIN_RECORDADO,ADMIN_EMAIL);
+        localStorage.removeItem(CLAVE_ACCESO);
+      }else{
+        SESION_ADMIN=null;
+        if(datos&&String(datos.email||"").trim().toLowerCase()===ADMIN_EMAIL){
+          localStorage.setItem(CLAVE_ADMIN_RECORDADO,ADMIN_EMAIL);
+          localStorage.removeItem(CLAVE_ACCESO);
+          return;
+        }
+        localStorage.setItem(CLAVE_ACCESO,JSON.stringify(datos));
+      }
+    }
+    function borrarAccesoLocal_(olvidarAdmin=false) {
+      SESION_ADMIN=null;
+      localStorage.removeItem(CLAVE_ACCESO);
+      if(olvidarAdmin)localStorage.removeItem(CLAVE_ADMIN_RECORDADO);
+    }
+
+    function mostrarVista(vista) {
+      const formSolicitar = document.getElementById("formularioAcceso");
+      const formIngresar = document.getElementById("formularioRecuperar");
+      const tabSolicitar = document.getElementById("tabSolicitar");
+      const tabIngresar = document.getElementById("tabIngresar");
+      const caja = document.getElementById("estadoAcceso");
+
+      caja.className = "estado";
+      caja.textContent = "";
+
+      if (vista === "solicitar") {
+        formSolicitar.classList.remove("oculto");
+        formIngresar.classList.add("oculto");
+        tabSolicitar.classList.add("selected");
+        tabIngresar.classList.remove("selected");
+        tabSolicitar.setAttribute("aria-pressed","true");
+        tabIngresar.setAttribute("aria-pressed","false");
+        document.getElementById("mensajeAcceso").textContent = "Ingresa tus datos. La solicitud quedará pendiente de autorización.";
+      } else {
+        formSolicitar.classList.add("oculto");
+        formIngresar.classList.remove("oculto");
+        tabIngresar.classList.add("selected");
+        tabSolicitar.classList.remove("selected");
+        tabIngresar.setAttribute("aria-pressed","true");
+        tabSolicitar.setAttribute("aria-pressed","false");
+        document.getElementById("mensajeAcceso").textContent = "Si ya te autorizaron previamente, ingresa tu correo para entrar.";
+      }
+    }
+
+    function mostrarFormularioAcceso_(mensaje) {
+      document.getElementById("bloqueoAcceso").classList.remove("oculto");
+      document.getElementById("tituloAcceso").textContent = "ACCESO AL SIMULADOR";
+      document.getElementById("mensajeAcceso").textContent = mensaje || "Elige una opcion para continuar:";
+
+      mostrarVista('solicitar');
+      document.getElementById("datosAcceso").classList.add("oculto");
+      document.getElementById("botonRevisarAcceso").classList.add("oculto");
+      document.getElementById("botonNuevaSolicitud").classList.add("oculto");
+      document.getElementById("estadoAcceso").textContent = "";
+      document.getElementById("estadoAcceso").className = "estado";
+    }
+
+    async function autoIngresarAdministrador_() {
+      const email=ADMIN_EMAIL;
+      try{
+        const estado=await ejecutarApiGAS("prepararIngreso",{email,device:deviceKey()});
+        if(!estado||!estado.owner)throw new Error("No fue posible reconocer la cuenta administradora.");
+        if(estado.requirePassword){
+          if(adminRecordado_()){
+            mostrarFormularioAcceso_("Ingresa tu contraseña para volver a autorizar este dispositivo.");
+            mostrarVista("ingresar");
+            document.getElementById("correoRecuperar").value=email;
+            await actualizarClaveAdministrador();
+          }else{
+            mostrarFormularioAcceso_();
+          }
+          return;
+        }
+        document.getElementById("bloqueoAcceso").classList.remove("oculto");
+        document.getElementById("tituloAcceso").textContent="VERIFICANDO ACCESO...";
+        document.getElementById("mensajeAcceso").textContent="Reconociendo este dispositivo de confianza.";
+        document.getElementById("formularioAcceso").classList.add("oculto");
+        document.getElementById("formularioRecuperar").classList.add("oculto");
+        const respuesta=await ejecutarApiGAS("ingresar",{email,password:"",device:deviceKey()});
+        if(!respuesta||!respuesta.autorizado||!respuesta.owner||!respuesta.token)throw new Error("No fue posible iniciar la sesión de administrador.");
+        guardarAccesoLocal_({token:respuesta.token,nombre:respuesta.nombre||"Administrador",email:respuesta.email||email,owner:true});
+        document.getElementById("bloqueoAcceso").classList.add("oculto");
+        aplicarVistaAdministrador_();
+      }catch(error){
+        if(adminRecordado_()){
+          mostrarFormularioAcceso_(error&&error.message?error.message:"Ingresa tu contraseña para continuar.");
+          mostrarVista("ingresar");
+          document.getElementById("correoRecuperar").value=email;
+          await actualizarClaveAdministrador();
+        }else{
+          mostrarFormularioAcceso_();
+        }
+      }
+    }
+
+    function comprobarAccesoUsuario() {
+      const acceso = leerAccesoLocal_();
+
+      if (adminRecordado_() && (!acceso || String(acceso.email||"").trim().toLowerCase()===ADMIN_EMAIL || acceso.owner)) {
+        void autoIngresarAdministrador_();
+        return;
+      }
+
+      if (!acceso || !acceso.token) {
+        void autoIngresarAdministrador_();
+        return;
+      }
+
+      document.getElementById("bloqueoAcceso").classList.remove("oculto");
+      document.getElementById("tituloAcceso").textContent = "VERIFICANDO ACCESO...";
+      document.getElementById("mensajeAcceso").textContent = "Espera un momento mientras revisamos tu autorizacion.";
+      document.getElementById("formularioAcceso").classList.add("oculto");
+      document.getElementById("formularioRecuperar").classList.add("oculto");
+
+      const accion = acceso.owner ? "verificarAdministrador" : "verificarAcceso";
+      ejecutarApiGAS(accion, { token: acceso.token, device: deviceKey() })
+        .then(function(respuesta) {
+          if (respuesta && respuesta.owner && String(respuesta.email||"").trim().toLowerCase()===ADMIN_EMAIL) {
+            guardarAccesoLocal_({ token: acceso.token, nombre: "Administrador", email: ADMIN_EMAIL, owner: true });
+          } else if (respuesta && respuesta.autorizado) {
+            guardarAccesoLocal_({ token: acceso.token, nombre: acceso.nombre || respuesta.nombre || "", email: acceso.email || respuesta.email || "", owner: !!acceso.owner });
+          }
+          procesarAccesoUsuario(respuesta);
+        })
+        .catch(function(error) {
+          const caja = document.getElementById("estadoAcceso");
+          caja.className = "estado error";
+          caja.textContent = error && error.message ? error.message : "No fue posible verificar el acceso.";
+          document.getElementById("tituloAcceso").textContent = "ACCESO RESTRINGIDO";
+          document.getElementById("botonRevisarAcceso").classList.remove("oculto");
+          document.getElementById("botonNuevaSolicitud").classList.remove("oculto");
+        });
+    }
+
+    function procesarAccesoUsuario(respuesta) {
+      if (respuesta && respuesta.autorizado) {
+        document.getElementById("bloqueoAcceso").classList.add("oculto");
+        aplicarVistaAdministrador_();
+        return;
+      }
+
+      const estado = respuesta ? respuesta.estado : "";
+      const datos = document.getElementById("datosAcceso");
+      const caja = document.getElementById("estadoAcceso");
+
+      if (estado === "SIN_SOLICITUD") {
+        borrarAccesoLocal_();
+        mostrarFormularioAcceso_(respuesta && respuesta.mensaje ? respuesta.mensaje : "Ingresa tus datos para solicitar acceso.");
+        return;
+      }
+
+      document.getElementById("bloqueoAcceso").classList.remove("oculto");
+      document.getElementById("formularioAcceso").classList.add("oculto");
+      document.getElementById("formularioRecuperar").classList.add("oculto");
+      document.getElementById("tituloAcceso").textContent = estado === "RECHAZADO" ? "SOLICITUD RECHAZADA" : "SOLICITUD PENDIENTE";
+      document.getElementById("mensajeAcceso").textContent = respuesta && respuesta.mensaje ? respuesta.mensaje : "Esperando autorizacion del administrador.";
+
+      datos.innerHTML = "<strong>Nombre:</strong> " + escaparHtml(respuesta.nombre || "") + "<br>" + "<strong>Correo:</strong> " + escaparHtml(respuesta.email || "");
+      datos.classList.remove("oculto");
+
+      document.getElementById("botonRevisarAcceso").classList.toggle("oculto", estado === "RECHAZADO");
+      document.getElementById("botonNuevaSolicitud").classList.remove("oculto");
+
+      caja.className = estado === "RECHAZADO" ? "estado error" : "estado ok";
+      caja.textContent = estado === "RECHAZADO" ? "Puedes enviar una nueva solicitud con estos u otros datos." : "Solicitud enviada. Cuando el administrador la autorice, presiona REVISAR AUTORIZACION.";
+    }
+
+    function solicitarAccesoUsuario() {
+      const nombre = document.getElementById("nombreSolicitante").value.trim();
+      const email = document.getElementById("correoSolicitante").value.trim();
+      const boton = document.getElementById("botonSolicitarAcceso");
+      const caja = document.getElementById("estadoAcceso");
+
+      if (nombre.length < 3) {
+        caja.className = "estado error";
+        caja.textContent = "Ingresa tu nombre.";
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        caja.className = "estado error";
+        caja.textContent = "Ingresa un correo electronico valido.";
+        return;
+      }
+
+      boton.disabled = true;
+      boton.textContent = "ENVIANDO SOLICITUD...";
+      caja.className = "estado";
+      caja.textContent = "";
+
+      ejecutarApiGAS("solicitarAcceso", { nombre: nombre, email: email, device: deviceKey() })
+        .then(function(respuesta) {
+          boton.disabled = false;
+          boton.textContent = "ENVIAR SOLICITUD";
+          if (respuesta && respuesta.token) {
+            guardarAccesoLocal_({ token: respuesta.token, nombre: respuesta.nombre || nombre, email: respuesta.email || email, owner: false });
+          }
+          procesarAccesoUsuario(respuesta);
+        })
+        .catch(function(error) {
+          boton.disabled = false;
+          boton.textContent = "ENVIAR SOLICITUD";
+          caja.className = "estado error";
+          caja.textContent = error && error.message ? error.message : "No fue posible enviar la solicitud.";
+        });
+    }
+
+    async function actualizarClaveAdministrador() {
+      const email = document.getElementById("correoRecuperar").value.trim().toLowerCase();
+      const bloque = document.getElementById("bloqueClaveAdmin");
+      const clave = document.getElementById("claveAdministrador");
+      if (!email) {
+        bloque.classList.add("oculto"); clave.required = false; clave.value = ""; return;
+      }
+      try {
+        const estado = await ejecutarApiGAS("prepararIngreso", { email: email, device: deviceKey() });
+        const pedir = !!(estado.owner && estado.requirePassword);
+        bloque.classList.toggle("oculto", !pedir);
+        clave.required = pedir;
+        if (!pedir) clave.value = "";
+      } catch (e) {
+        bloque.classList.remove("oculto");
+        clave.required = true;
+      }
+    }
+
+    function recuperarAccesoUsuario() {
+      const email = document.getElementById("correoRecuperar").value.trim().toLowerCase();
+      const boton = document.getElementById("botonRecuperar");
+      const caja = document.getElementById("estadoAcceso");
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        caja.className = "estado error";
+        caja.textContent = "Ingresa un correo electrónico válido.";
+        return;
+      }
+
+      boton.disabled = true;
+      boton.textContent = "VERIFICANDO...";
+      caja.className = "estado";
+      caja.textContent = "";
+
+      const payload = { email: email, password: document.getElementById("claveAdministrador").value, device: deviceKey() };
+
+      ejecutarApiGAS("ingresar", payload)
+        .then(function(respuesta) {
+          boton.disabled = false;
+          boton.textContent = "INGRESAR AL SIMULADOR";
+          document.getElementById("claveAdministrador").value = "";
+          if (respuesta && respuesta.autorizado && respuesta.token) {
+            guardarAccesoLocal_({ token: respuesta.token, nombre: respuesta.nombre || "", email: respuesta.email || email, owner: !!respuesta.owner });
+            document.getElementById("bloqueoAcceso").classList.add("oculto");
+            aplicarVistaAdministrador_();
+          } else {
+            caja.className = "estado error";
+            caja.textContent = respuesta && respuesta.mensaje ? respuesta.mensaje : "El correo ingresado no cuenta con autorización.";
+          }
+        })
+        .catch(async function(error) {
+          boton.disabled = false;
+          boton.textContent = "INGRESAR AL SIMULADOR";
+          caja.className = "estado error";
+          caja.textContent = error && error.message ? error.message : "No fue posible validar el correo.";
+          await actualizarClaveAdministrador();
+        });
+    }
+
+    function cerrarGestionAccesos() {
+      document.getElementById("panelGestionAccesos").classList.add("oculto");
+      document.body.classList.remove("admin-access-open");
+    }
+
+    async function alternarGestionAccesos() {
+      if (!esAdministradorActual_()) return;
+      const panel = document.getElementById("panelGestionAccesos");
+      if (!panel.classList.contains("oculto")) { cerrarGestionAccesos(); return; }
+      panel.classList.remove("oculto");
+      document.body.classList.add("admin-access-open");
+      await cargarGestionAccesos();
+    }
+
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Escape" && !document.getElementById("panelGestionAccesos").classList.contains("oculto")) cerrarGestionAccesos();
+    });
+
+    async function cargarGestionAccesos() {
+      const acceso = accesoActual_();
+      const lista = document.getElementById("listaAccesos");
+      lista.textContent = "Cargando...";
+      try {
+        const usuarios = await ejecutarApiGAS("listarAccesos", { token: acceso.token, device: deviceKey() });
+        lista.replaceChildren();
+        if (!usuarios.length) {
+          lista.textContent = "No hay solicitudes registradas.";
+          return;
+        }
+        usuarios.forEach(function(u) {
+          const fila = document.createElement("div");
+          fila.className = "admin-usuario";
+          const info = document.createElement("div");
+          info.textContent = (u.nombre ? u.nombre + " · " : "") + u.email + " · " + u.estado +
+            " · Móvil: " + (u.mobileBound ? "vinculado" : "libre") +
+            " · Escritorio: " + (u.desktopBound ? "vinculado" : "libre") +
+            (u.ultimoAcceso ? " · Último acceso: " + u.ultimoAcceso : "");
+          fila.appendChild(info);
+          const acciones = document.createElement("div");
+          acciones.className = "admin-acciones";
+          function agregar(label, fn) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.textContent = label;
+            b.addEventListener("click", fn);
+            acciones.appendChild(b);
+          }
+          if (u.estado !== "AUTORIZADO") agregar("Autorizar", () => cambiarAcceso(u.email, "AUTORIZADO"));
+          if (u.estado !== "RECHAZADO") agregar("Rechazar / suspender", () => cambiarAcceso(u.email, "RECHAZADO"));
+          if (u.mobileBound || u.desktopBound) agregar("Restablecer dispositivos", () => restablecerAccesosDispositivo(u.email));
+          agregar("Eliminar", () => cambiarAcceso(u.email, "ELIMINAR"));
+          fila.appendChild(acciones);
+          lista.appendChild(fila);
+        });
+      } catch (e) {
+        lista.textContent = e && e.message ? e.message : "No fue posible cargar los accesos.";
+      }
+    }
+
+    function cambiarCuentaSimulador() {
+      if (!confirm("¿Cerrar la sesión de esta app y entrar con otra cuenta?")) return;
+      borrarAccesoLocal_(true);
+      aplicarVistaAdministrador_();
+      mostrarFormularioAcceso_("Ingresa con tu correo de administrador o solicita acceso.");
+      mostrarVista("ingresar");
+      document.getElementById("correoRecuperar").value = "";
+      document.getElementById("claveAdministrador").value = "";
+    }
+    async function agregarAccesoDirecto(event) {
+      event.preventDefault();
+      if (!esAdministradorActual_()) return;
+      const estado = document.getElementById("estadoGestionAccesos");
+      const nombre = document.getElementById("nombreNuevoAcceso").value.trim();
+      const email = document.getElementById("correoNuevoAcceso").value.trim();
+      estado.textContent = "Guardando...";
+      try {
+        const acceso=accesoActual_();
+        await ejecutarApiGAS("crearAcceso",{token:acceso.token,nombre,email,device:deviceKey()});
+        document.getElementById("formAgregarAcceso").reset();
+        estado.textContent = "Acceso autorizado para " + email + ".";
+        await cargarGestionAccesos();
+      } catch(e) {estado.textContent=e.message||"No se pudo guardar el acceso.";}
+    }
+
+    async function cambiarAcceso(email, estado) {
+      if (!confirm((estado === "ELIMINAR" ? "Eliminar cuenta" : estado === "AUTORIZADO" ? "Autorizar" : "Rechazar / suspender") + " para " + email + "?")) return;
+      const acceso = accesoActual_();
+      await ejecutarApiGAS("actualizarAcceso", { token: acceso.token, email: email, estado: estado, device: deviceKey() });
+      await cargarGestionAccesos();
+    }
+
+    async function restablecerAccesosDispositivo(email) {
+      if (!confirm("Restablecer los dispositivos vinculados para " + email + "?")) return;
+      const acceso = accesoActual_();
+      await ejecutarApiGAS("restablecerDispositivos", { token: acceso.token, email: email, device: deviceKey() });
+      await cargarGestionAccesos();
+    }
+
+    function nuevaSolicitudAcceso() {
+      borrarAccesoLocal_(true);
+      document.getElementById("nombreSolicitante").value = "";
+      document.getElementById("correoSolicitante").value = "";
+      document.getElementById("correoRecuperar").value = "";
+      document.getElementById("claveAdministrador").value = "";
+      aplicarVistaAdministrador_();
+      mostrarFormularioAcceso_();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      document.getElementById("fechaConsulta").value = fechaParaInput(new Date());
+      actualizarOpciones();
+      actualizarCasaFiscal();
+      aplicarVistaAdministrador_();
+      comprobarAccesoUsuario();
+
+    });
+
+    function actualizarCasaFiscal() {
+      const ocupaCasaFiscal = document.getElementById("ocupaCasaFiscal").value === "Sí";
+      const correspondeCasa = document.getElementById("correspondeCasa");
+
+      if (ocupaCasaFiscal) {
+        correspondeCasa.value = "No";
+        correspondeCasa.disabled = true;
+      } else {
+        correspondeCasa.disabled = false;
+      }
+    }
+
+    function actualizarOpciones() {
+      const grado = document.getElementById("grado").value;
+      const campoEsGraduado = document.getElementById("campoEsGraduado");
+      const selectEsGraduado = document.getElementById("esGraduado");
+      const campoSobresueldo = document.getElementById("campoSobresueldo");
+      const sobresueldo = document.getElementById("sobresueldo");
+      const campoAsignacionPolicial = document.getElementById("campoAsignacionPolicial");
+      const asignacionPolicial = document.getElementById("asignacionPolicial");
+      const campoCOP = document.getElementById("campoUnidadCOP");
+      const selectCOP = document.getElementById("unidadCOP");
+
+      const nuncaGraduados = ["Subteniente", "Teniente"];
+      const siempreGraduados = ["Teniente Coronel", "Coronel", "General", "General Inspector", "General Director"];
+      const gradosGenerales = ["General", "General Inspector", "General Director"];
+
+      if (nuncaGraduados.includes(grado)) {
+        campoEsGraduado.style.display = "none";
+        selectEsGraduado.value = "No";
+        selectEsGraduado.disabled = false;
+      } else if (siempreGraduados.includes(grado)) {
+        campoEsGraduado.style.display = "block";
+        selectEsGraduado.value = "Sí";
+        selectEsGraduado.disabled = true;
+      } else {
+        campoEsGraduado.style.display = "block";
+        selectEsGraduado.disabled = false;
+      }
+
+      const esGraduado = (selectEsGraduado.value === "Sí") && !nuncaGraduados.includes(grado);
+
+      campoSobresueldo.style.display = "block";
+      if (esGraduado) {
+        sobresueldo.value = "Título profesional";
+        sobresueldo.disabled = true;
+      } else {
+        sobresueldo.disabled = false;
+      }
+
+      if (!esGraduado && sobresueldo.value === "Ninguno") {
+        campoAsignacionPolicial.style.display = "block";
+      } else {
+        asignacionPolicial.value = "No";
+        campoAsignacionPolicial.style.display = "none";
+      }
+
+      if (gradosGenerales.includes(grado)) {
+        campoCOP.style.display = "none";
+        selectCOP.value = "No";
+      } else {
+        campoCOP.style.display = "block";
+      }
+    }
+
+    function fechaParaInput(fecha) {
+      const anio = fecha.getFullYear();
+      const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+      const dia = String(fecha.getDate()).padStart(2, "0");
+      return anio + "-" + mes + "-" + dia;
+    }
+
+    function calcular() {
+      const boton = document.getElementById("botonCalcular");
+      const estado = document.getElementById("estado");
+
+      try {
+        const fechaIngresoVal = document.getElementById("fechaIngreso").value;
+        const fechaConsultaVal = document.getElementById("fechaConsulta").value;
+
+        if (!fechaIngresoVal || fechaIngresoVal.trim() === "") {
+          throw new Error("Ingrese la fecha de ingreso a la institución.");
+        }
+        if (!fechaConsultaVal || fechaConsultaVal.trim() === "") {
+          throw new Error("Ingrese la fecha a consultar.");
+        }
+
+        boton.disabled = true;
+        boton.textContent = "CALCULANDO...";
+        estado.className = "estado";
+        estado.textContent = "";
+
+        const grado = document.getElementById("grado").value;
+        const nuncaGraduados = ["Subteniente", "Teniente"];
+        const siempreGraduados = ["Teniente Coronel", "Coronel", "General", "General Inspector", "General Director"];
+        const gradosGenerales = ["General", "General Inspector", "General Director"];
+
+        let esGraduadoVal = "No";
+        if (!nuncaGraduados.includes(grado)) {
+          esGraduadoVal = siempreGraduados.includes(grado) ? "Sí" : document.getElementById("esGraduado").value;
+        }
+
+        let sobresueldoVal = "Ninguno";
+        if (esGraduadoVal === "Sí") {
+          sobresueldoVal = "Título profesional";
+        } else {
+          sobresueldoVal = document.getElementById("sobresueldo").value;
+        }
+
+        let asignacionPolicialVal = "No";
+        if (esGraduadoVal === "No" && sobresueldoVal === "Ninguno") {
+          asignacionPolicialVal = document.getElementById("asignacionPolicial").value;
+        }
+
+        const unidadCOPVal = gradosGenerales.includes(grado) ? "No" : document.getElementById("unidadCOP").value;
+
+        const datos = {
+          fechaConsulta: fechaConsultaVal.trim(),
+          fechaIngreso: fechaIngresoVal.trim(),
+          grado: grado,
+          cargasFamiliares: document.getElementById("cargasFamiliares").value,
+          esGraduado: esGraduadoVal,
+          sobresueldo: sobresueldoVal,
+          asignacionPolicial: asignacionPolicialVal,
+          porcentajeZona: document.getElementById("porcentajeZona").value,
+          correspondeCasa: document.getElementById("correspondeCasa").value,
+          ocupaCasaFiscal: document.getElementById("ocupaCasaFiscal").value,
+          unidadCOP: unidadCOPVal,
+          descuentosParticulares: document.getElementById("descuentosParticulares").value,
+          tokenAcceso: esAdministradorActual_() ? "" : (leerAccesoLocal_() || {}).token || "",
+          adminToken: esAdministradorActual_() ? (leerAccesoLocal_() || {}).token || "" : "",
+          deviceKey: deviceKey()
+        };
+
+        ejecutarApiGAS("calcularRemuneracion", { datos: datos })
+          .then(mostrarResultado)
+          .catch(mostrarError);
+
+      } catch (err) {
+        boton.disabled = false;
+        boton.textContent = "CALCULAR REMUNERACIÓN";
+        estado.className = "estado error";
+        estado.textContent = err.message || "Error al validar los datos ingresados.";
+      }
+    }
+
+    function mostrarResultado(resultado) {
+      const boton = document.getElementById("botonCalcular");
+      boton.disabled = false;
+      boton.textContent = "CALCULAR REMUNERACIÓN";
+
+      const estado = document.getElementById("estado");
+      estado.className = "estado ok";
+      estado.textContent = "Cálculo realizado correctamente.";
+
+      document.getElementById("resultado").style.display = "block";
+
+      document.getElementById("tarjetasPrincipales").innerHTML =
+        tarjetaPrincipal("TOTAL HABERES", resultado.resumen.totalHaberes) +
+        tarjetaPrincipal("TOTAL DESCUENTOS", resultado.resumen.totalDescuentos) +
+        tarjetaPrincipal("ALCANCE LÍQUIDO", resultado.resumen.alcanceLiquido);
+
+      document.getElementById("tarjetas").innerHTML =
+        tarjeta("Fecha consultada", resultado.fechaConsulta) +
+        tarjeta("Años de servicio", resultado.aniosServicio) +
+        tarjeta("Trienios", resultado.trienios) +
+        tarjeta("Sueldo en posesión", moneda(resultado.sueldoPosesion));
+
+      document.getElementById("tablaHaberes").innerHTML =
+        resultado.haberes
+          .filter(item => Number(item.valor || 0) !== 0)
+          .map(item => "<tr><td>" + escaparHtml(item.letra) + "</td><td>" + escaparHtml(item.concepto) + "</td><td class='valor'>" + moneda(item.valor) + "</td></tr>")
+          .join("");
+
+      document.getElementById("tablaDescuentos").innerHTML =
+        resultado.descuentos
+          .filter(item => Number(item.valor || 0) !== 0)
+          .map(item => "<tr><td>" + escaparHtml(item.tipo) + "</td><td>" + escaparHtml(item.concepto) + "</td><td>" + escaparHtml(item.origen) + "</td><td class='valor'>" + moneda(item.valor) + "</td></tr>")
+          .join("");
+
+      const resumen = [
+        ["TOTAL IMPONIBLE", resultado.resumen.totalImponible],
+        ["TOTAL AFECTO IMPUESTO", resultado.resumen.totalAfectoImpuesto],
+        ["TOTAL AFECTO ZONA", resultado.resumen.totalAfectoZona],
+        ["TOTAL HABERES", resultado.resumen.totalHaberes],
+        ["DESCUENTOS LEGALES", resultado.resumen.descuentosLegales],
+        ["DESCUENTOS PARTICULARES", resultado.resumen.descuentosParticulares],
+        ["TOTAL DESCUENTOS", resultado.resumen.totalDescuentos],
+        ["ALCANCE LÍQUIDO", resultado.resumen.alcanceLiquido]
+      ];
+
+      document.getElementById("tablaResumen").innerHTML =
+        resumen.map(fila => "<tr><th>" + escaparHtml(fila[0]) + "</th><td class='" + (fila[0] === "ALCANCE LÍQUIDO" ? "valor liquido" : "valor") + "'>" + moneda(fila[1]) + "</td></tr>").join("");
+
+      window.scrollTo({ top: document.getElementById("resultado").offsetTop - 10, behavior: "smooth" });
+    }
+
+    function mostrarError(error) {
+      const boton = document.getElementById("botonCalcular");
+      boton.disabled = false;
+      boton.textContent = "CALCULAR REMUNERACIÓN";
+
+      const estado = document.getElementById("estado");
+      estado.className = "estado error";
+      estado.textContent = error && error.message ? error.message : "No fue posible realizar el cálculo.";
+    }
+
+    function tarjetaPrincipal(titulo, valor) {
+      return "<div class='tarjeta-principal'><small>" + escaparHtml(String(titulo)) + "</small><strong>" + moneda(valor) + "</strong></div>";
+    }
+
+    function tarjeta(titulo, valor) {
+      return "<div class='tarjeta'><small>" + escaparHtml(String(titulo)) + "</small><strong>" + escaparHtml(String(valor)) + "</strong></div>";
+    }
+
+    function moneda(valor) {
+      return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(valor || 0));
+    }
+
+    function escaparHtml(texto) {
+      return String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

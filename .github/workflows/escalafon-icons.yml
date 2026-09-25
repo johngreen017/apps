@@ -1,0 +1,31 @@
+name: Ajustar iconos Escalafón
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/escalafon-icons.yml'
+      - 'scripts/normalize_escalafon_icons.py'
+permissions:
+  contents: write
+jobs:
+  resize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Crear iconos optimizados y validar referencias
+        run: |
+          python -m pip install --disable-pip-version-check 'Pillow>=10,<12'
+          python scripts/normalize_escalafon_icons.py
+      - name: Publicar iconos y configuración en el mismo commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add escalafon-online/icons-v3 escalafon-online/index.html escalafon-online/manifest.webmanifest
+          git diff --cached --quiet && exit 0
+          git commit -m "Ajustar marco del icono Escalafón para iPhone/iPad"
+          git push origin HEAD:main

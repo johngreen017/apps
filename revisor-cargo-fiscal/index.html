@@ -3,9 +3,22 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Revisor de Cargo Fiscal</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <meta name="theme-color" content="#184e38">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Revisor Cargo">
+  <link rel="icon" type="image/png" sizes="64x64" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/icons-v6/favicon-64.png?v=6">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/icons-v6/apple-touch-icon-180.png?v=6">
+  <link rel="apple-touch-icon" sizes="167x167" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/icons-v6/apple-touch-icon-167.png?v=6">
+  <link rel="apple-touch-icon" sizes="152x152" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/icons-v6/apple-touch-icon-152.png?v=6">
+  <link rel="manifest" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/manifest.webmanifest?v=6">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
   <style>
     :root {
       color-scheme: light;
@@ -18,22 +31,84 @@
       --rojo: #a83232;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--fondo); color: var(--texto); }
-    button, input { font: inherit; }
-    .contenedor { width: min(1400px, 100%); margin: 0 auto; padding: 16px; }
+    body {
+      margin: 0;
+      background: var(--fondo);
+      color: var(--texto);
+    }
+    button, input, select { font: inherit; }
+    .contenedor {
+      width: min(1400px, 100%);
+      margin: 0 auto;
+      padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 16px;
+    }
     .encabezado {
       background: var(--verde); color: white; text-align: center;
       padding: 20px; border-radius: 14px; box-shadow: 0 5px 18px rgba(24,78,56,.2);
     }
-    .encabezado h1 { margin: 0; font-size: clamp(1.35rem, 4vw, 2rem); }
+    .encabezado h1 { margin: 0; font-size: clamp(1.35rem, 4vw, 2rem); line-height: 1.18; }
+    .encabezado .depto-titulo { display: inline-block; margin-top: 3px; }
     .encabezado p { margin: 6px 0 0; color: var(--verde-claro); }
-    .barra {
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+
+    .usuario {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0 0;
+      padding: 13px 16px; background: white; border: 1px solid var(--borde); border-radius: 12px;
+    }
+    .usuario div { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left; justify-content: center; }
+    .usuario span { font-size: .72rem; color: #66756d; font-weight: 700; letter-spacing: .04em; }
+    .usuario strong { color: var(--verde); }
+
+    .barra, .revision {
       margin: 16px 0; padding: 14px; background: white; border: 1px solid var(--borde);
       border-radius: 12px;
     }
-    .archivo { flex: 1 1 320px; }
-    input[type=file] { width: 100%; padding: 12px; border: 1px dashed #789184; border-radius: 9px; background: #fbfdfb; }
+    .barra {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      align-items: stretch;
+    }
+    .revision { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .bloque-carga, .bloque-informe, .bloque-gestion {
+      min-width: 0; padding: 14px; border: 1px solid var(--borde);
+      border-radius: 10px; background: #fbfdfb;
+    }
+    .titulo-bloque {
+      display: block; margin-bottom: 8px; color: var(--verde);
+      font-size: .8rem; font-weight: 800; letter-spacing: .035em; text-align: center;
+    }
+    .archivo { display: block; }
+    input[type=file] {
+      width: 100%; min-height: 48px; padding: 10px;
+      border: 1px dashed #789184; border-radius: 9px; background: white;
+    }
+    .nombre-archivo {
+      display: block; min-height: 20px; margin-top: 8px; color: #66756d;
+      font-size: .84rem; font-weight: 700; overflow-wrap: anywhere;
+    }
+    .nombre-archivo.cargado { color: var(--verde); }
+    select, input[type=search] {
+      min-height: 46px; border: 1px solid var(--borde); border-radius: 9px; padding: 0 12px; background: white;
+    }
+    .bloque-informe, .bloque-gestion {
+      display: grid; gap: 10px; align-content: start;
+    }
+    .documentos {
+      display: grid; grid-template-columns: 1fr;
+      gap: 8px; align-items: end;
+    }
+    .documentos .campo-documento { display: grid; gap: 6px; min-width: 0; }
+    .documentos label { color: #5f6d65; font-size: .76rem; font-weight: 800; }
+    .documentos select { width: 100%; }
+    .acciones-archivo { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .acciones-archivo .accion, .documentos .accion { width: 100%; }
+    .campo-control { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .campo-control label { font-size: .78rem; color: #5f6d65; font-weight: 700; }
+    .campo-grupo { flex: 1 1 280px; }
+    .campo-busqueda { flex: 2 1 430px; }
+    .campo-control select, .campo-control input { width: 100%; }
+    .grupo-info { flex: 0 1 auto; font-size: .85rem; color: #5f6d65; padding-top: 22px; }
+
     .accion {
       min-height: 46px; border: 0; border-radius: 9px; padding: 0 18px;
       font-weight: 700; cursor: pointer;
@@ -41,59 +116,275 @@
     .primaria { background: var(--verde); color: white; }
     .secundaria { background: #e7ece9; color: #243c30; }
     .peligro { background: #f8e7e7; color: #8b2525; }
-    .accion:disabled { opacity: .45; cursor: not-allowed; }
-    .metricas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .accion:disabled, select:disabled, input:disabled { opacity: .45; cursor: not-allowed; }
+
+    .metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
     .metrica { background: white; border: 1px solid var(--borde); border-radius: 12px; padding: 15px; text-align: center; }
     .metrica strong { display: block; font-size: 1.65rem; color: var(--verde); }
+    .metrica span { display: block; margin-top: 2px; }
+
     .columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
     .panel { background: white; border: 1px solid var(--borde); border-radius: 14px; padding: 14px; min-height: 220px; }
     .panel h2 { margin: 0 0 4px; font-size: 1.1rem; }
     .panel p { margin: 0 0 12px; color: #66756d; font-size: .9rem; }
     .lista { display: grid; gap: 8px; max-height: 58vh; overflow: auto; padding-right: 3px; }
     .item {
-      width: 100%; min-height: 54px; padding: 12px; text-align: left; cursor: pointer;
+      width: 100%; min-height: 62px; padding: 12px; text-align: left; cursor: pointer;
       border: 1px solid var(--borde); border-radius: 9px; background: #fbfcfb;
       line-height: 1.35; overflow-wrap: anywhere;
     }
     .item:hover { border-color: var(--verde); background: #f2f8f4; }
+    .item.automatico { cursor: default; background: #f7faf8; border-style: dashed; opacity: 1; }
+    .item.automatico:hover { border-color: var(--borde); background: #f7faf8; }
+    .ficha { margin: 12px 0; padding: 16px; background: #fff; border: 2px solid var(--verde); border-radius: 12px; }
+    .ficha h2 { margin: 0 0 8px; font-size: 1.1rem; }
+    .ficha .campos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin: 12px 0; }
+    .ficha label { display: grid; gap: 5px; font-size: .9rem; font-weight: 700; }
+    .ficha input, .ficha textarea, .ficha select { width: 100%; min-height: 44px; border: 1px solid var(--borde); border-radius: 8px; padding: 9px; font: inherit; }
+    .ficha textarea { min-height: 88px; }
+    .ficha .botones { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ficha .error { color: var(--rojo); font-weight: 700; }
+    .control-destino {
+      margin: 12px 0; padding: 12px;
+      border: 1px solid #b9cec1; border-radius: 9px; background: #f2f8f4;
+    }
+    .control-destino > strong {
+      display: block; margin-bottom: 8px; color: var(--verde); font-size: .9rem;
+    }
+    .destino-campos {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    @media(max-width:720px) {
+      .ficha .campos, .destino-campos { grid-template-columns: 1fr; }
+    }
+    .item-acciones { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+    .item-acciones .accion { min-height:40px; padding:0 12px; font-size:.85rem; }
+    .item-contenedor { border:1px solid var(--borde); border-radius:9px; padding:10px; background:#fbfcfb; }
+    .item-contenedor .item { border:0; padding:3px; min-height:35px; background:transparent; }
+    .item-contenedor .item:hover { background:transparent; }
+    .item-auto { display: block; margin-top: 5px; color: #5f6d65; font-size: .78rem; font-weight: 700; }
+    .item-titulo { display: block; font-weight: 800; color: #243c30; margin-bottom: 4px; }
+    .item-detalle { display: block; color: #66756d; font-size: .86rem; }
+    .item-cargo { display: block; color: #243c30; font-size: .95rem; font-weight: 900; }
+    .item-ubicacion {
+      display: block; margin-top: 8px; padding: 7px 9px;
+      color: var(--verde); background: #e7f2eb; border-left: 4px solid var(--verde);
+      border-radius: 6px; font-size: .8rem; font-weight: 900;
+    }
+    .ficha-ubicacion {
+      margin: 10px 0 14px; padding: 11px 13px;
+      color: var(--verde); background: #e7f2eb; border-left: 5px solid var(--verde);
+      border-radius: 8px; font-weight: 900;
+    }
+    .item-novedad-oficial {
+      display: block; margin-top: 7px; padding: 7px 9px;
+      color: #991b1b; background: #fee2e2; border-left: 4px solid #dc2626;
+      border-radius: 6px; font-size: .86rem; font-weight: 900;
+    }
     .vacio { color: #77847d; text-align: center; padding: 30px 12px; border: 1px dashed var(--borde); border-radius: 9px; }
     .estado { min-height: 24px; margin: 10px 2px 0; color: #5f6d65; }
+
+    .pie-app {
+      width: 100%;
+      min-height: 82px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      margin-top: 16px;
+      margin-bottom: env(safe-area-inset-bottom, 0px);
+      padding: 12px 16px;
+      background: var(--verde);
+      color: white;
+      text-align: center;
+      border-radius: 14px;
+      box-shadow: 0 5px 18px rgba(24,78,56,.2);
+    }
+    .pie-app strong { font-size: .9rem; }
+    .pie-app span { font-size: .78rem; color: var(--verde-claro); }
+    .pie-app small { font-size: .72rem; color: #c5ddcd; }
+
     @media (max-width: 720px) {
-      .contenedor { padding: 10px; }
+      .contenedor { padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px; }
+      .usuario { grid-template-columns: 1fr; }
       .metricas { gap: 7px; }
       .metrica { padding: 10px 4px; font-size: .78rem; }
       .metrica strong { font-size: 1.35rem; }
       .columnas { grid-template-columns: 1fr; }
       .lista { max-height: none; }
-      .barra .accion { flex: 1 1 140px; }
+      .barra { grid-template-columns: 1fr; padding: 10px; }
+      .bloque-carga, .bloque-informe, .bloque-gestion { padding: 12px; }
+      .documentos, .acciones-archivo { grid-template-columns: 1fr; }
+      .revision { align-items: stretch; }
+      .campo-grupo, .campo-busqueda { flex-basis: 100%; }
+      .grupo-info { padding-top: 0; }
     }
+    .access-overlay{position:fixed;inset:0;z-index:99999;background:rgba(18,62,48,.88);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px}
+    .access-overlay[hidden]{display:none!important}.access-card{width:min(390px,100%);background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+    .access-card h2{margin:0 0 6px;color:var(--verde)}.access-card p{margin:0 0 12px;font-size:.85rem;color:#52675e}.access-tabs{display:flex;gap:8px;margin-bottom:12px}
+    .access-tabs button{flex:1}.access-card input{width:100%;margin:4px 0 10px}.access-status{margin-top:10px;font-size:.82rem;white-space:pre-line}.access-status.error{color:#9c0006}.access-status.ok{color:var(--verde)}
+    .admin-access{margin:10px 0 18px;padding:12px;border:1px solid #cbd8d0;border-radius:10px;background:#f4f8f5}.admin-access[hidden]{display:none!important}
+    .admin-user{padding:9px 0;border-bottom:1px solid #dce6df;font-size:.78rem;line-height:1.45}.admin-user:last-child{border-bottom:0}.admin-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.admin-actions button{padding:7px 9px;font-size:.75rem}
+
+    /* Diseño de ingreso unificado con Escalafón. Solo afecta al modal de acceso. */
+    .access-overlay{position:fixed;inset:0;z-index:99999;background:rgba(20,63,46,.85);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+    .access-card{background:#fff;border-radius:16px;width:560px;max-width:100%;padding:28px 24px;box-shadow:0 15px 45px #122c3240;max-height:calc(100dvh - 40px);overflow:auto;color:#173d2b;text-align:left}
+    .access-card h2{text-align:center;font-size:24px;margin:0 0 12px;color:#173d2b;font-weight:700}
+    .access-card > p{text-align:center;line-height:1.45;margin:0 0 20px;color:#173d2b;font-size:16px}
+    .access-card .access-tabs{display:flex;gap:12px;margin:20px 0}
+    .access-card .access-tabs button{flex:1;background:#e7eee8;color:#173d2b;border:0;border-radius:8px;font-size:16px!important;font-weight:600;min-height:44px;margin:0;padding:11px 13px;cursor:pointer}
+    .access-card .access-tabs button.selected{background:#173d2b;color:#fff}
+    .access-card form label{display:block;font-size:16px;font-weight:600;color:#173d2b;margin:0 0 7px}
+    .access-card form input{display:block;width:100%!important;min-width:0!important;font-size:20px!important;min-height:58px;border:1px solid #b9cdc1;background:#fff;color:#19372e;border-radius:8px;padding:11px 13px;margin:0 0 16px}
+    .access-card form > button[type=submit]{display:block;width:100%!important;min-height:60px;margin:12px 0 0;padding:11px 13px;border:1px solid #173d2b;border-radius:8px;background:#173d2b;color:#fff;font-size:20px!important;font-weight:700;cursor:pointer}
+    .access-card form button:disabled{opacity:.5;cursor:wait}
+    /* Aislar la pantalla de acceso de estilos generales del Revisor y de botones nativos de iPadOS. */
+    #accessOverlay{width:100%;height:100%;height:100dvh;box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+    #accessOverlay > .access-card{width:560px!important;max-width:100%!important;padding:28px 24px!important;margin:auto;box-sizing:border-box;border-radius:16px!important;background:#fff!important}
+    #accessOverlay #accessTitle{display:block;text-align:center!important;font-size:24px!important;font-weight:700!important;line-height:1.25!important;margin:0 0 12px!important}
+    #accessOverlay #accessHint{text-align:center!important;color:#173d2b!important;font-size:16px!important;line-height:1.45!important;margin:0 0 20px!important}
+    #accessOverlay .access-tabs{display:flex!important;gap:12px!important;margin:20px 0!important;width:100%}
+    #accessOverlay .access-tabs > button{display:block!important;flex:1 1 0!important;min-width:0!important;width:50%!important;min-height:44px!important;padding:11px 13px!important;margin:0!important;border:0!important;border-radius:8px!important;background:#e7eee8!important;color:#173d2b!important;font:600 16px/1.25 system-ui,-apple-system,sans-serif!important;appearance:none!important;-webkit-appearance:none!important;white-space:normal!important}
+    #accessOverlay .access-tabs > button.selected{background:#173d2b!important;color:#fff!important}
+    #accessOverlay form label{display:block!important;font-size:16px!important;font-weight:600!important;color:#173d2b!important;margin:0 0 7px!important}
+    #accessOverlay form input{display:block!important;width:100%!important;min-height:58px!important;padding:11px 13px!important;font-size:20px!important;margin:0 0 16px!important;border:1px solid #b9cdc1!important;border-radius:8px!important;background:#fff!important;color:#19372e!important;box-sizing:border-box}
+    #accessOverlay #accessApplyForm > button[type=submit],#accessOverlay #accessLoginForm > button[type=submit]{display:block!important;width:100%!important;min-height:60px!important;padding:11px 13px!important;margin:12px 0 0!important;border:1px solid #173d2b!important;border-radius:8px!important;background:#173d2b!important;color:#fff!important;font:700 20px/1.25 system-ui,-apple-system,sans-serif!important;appearance:none!important;-webkit-appearance:none!important}
+    @media(max-width:600px){#accessOverlay > .access-card{padding:24px 18px!important}#accessOverlay .access-tabs{gap:8px!important}#accessOverlay .access-tabs > button{font-size:14px!important;padding:12px 8px!important}#accessOverlay #accessTitle{font-size:21px!important}}
+    /* Gestión de accesos en vista exclusiva, armonizada con Escalafón. */
+    body.admin-access-open{overflow:hidden!important}
+    #adminAccessPanel.admin-access-overlay{position:fixed!important;inset:0!important;z-index:99998!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))!important;background:#eef3ef!important;border:0!important;border-radius:0!important;overflow:auto!important}
+    #adminAccessPanel.admin-access-overlay[hidden]{display:none!important}
+    #adminAccessPanel .admin-access-modal{width:min(1180px,100%);max-height:calc(100dvh - 36px);overflow:auto;background:#fff;border:1px solid #d5e2da;border-radius:18px;padding:28px 30px;box-shadow:0 18px 50px rgba(18,62,48,.20);color:#19372e}
+    #adminAccessPanel .admin-access-header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 18px}
+    #adminAccessPanel .admin-access-header h2{margin:0;color:#123e30;font-size:24px}
+    #adminAccessPanel .admin-access-close{flex:0 0 auto;min-width:92px;margin:0}
+    #adminAccessPanel .admin-access-help{margin:0 0 20px;font-size:16px;line-height:1.5;color:#60796f}
+    #adminAccessPanel #adminAccessList{margin-top:18px}
+    @media(max-width:700px){#adminAccessPanel.admin-access-overlay{align-items:flex-start!important;padding:12px!important}#adminAccessPanel .admin-access-modal{max-height:calc(100dvh - 24px);padding:20px 16px;border-radius:14px}#adminAccessPanel .admin-access-header{align-items:flex-start}#adminAccessPanel .admin-access-header h2{font-size:21px}#adminAccessPanel .admin-access-close{min-width:78px}}
   </style>
 </head>
 <body>
+  <div id="accessOverlay" class="access-overlay" data-access-layout="escalafon-20260924-v2">
+    <div class="access-card">
+      <h2 id="accessTitle">ACCESO AL REVISOR</h2>
+      <p id="accessHint">Ingresa tus datos. La solicitud quedará pendiente de autorización.</p>
+      <div class="access-tabs">
+        <button id="accessTabApply" type="button" class="selected" aria-pressed="true">Solicitar Acceso</button>
+        <button id="accessTabLogin" type="button" aria-pressed="false">Ya estoy Autorizado</button>
+      </div>
+      <form id="accessApplyForm">
+        <label for="accessName">Nombre y Apellido</label>
+        <input id="accessName" required minlength="3" maxlength="100" autocomplete="name" placeholder="Ej: Juan Pérez">
+        <label for="accessEmailApply">Correo electrónico</label>
+        <input id="accessEmailApply" type="email" required autocomplete="email" placeholder="correo@ejemplo.com">
+        <button type="submit">ENVIAR SOLICITUD</button>
+      </form>
+      <form id="accessLoginForm" hidden>
+        <label for="accessEmailLogin">Ingresa tu correo autorizado</label>
+        <input id="accessEmailLogin" type="email" required autocomplete="email" placeholder="correo@ejemplo.com">
+        <div id="accessAdminPasswordBox" hidden>
+          <label for="accessAdminPassword">Contraseña de administrador</label>
+          <input id="accessAdminPassword" type="password" autocomplete="current-password">
+          <small>Se solicita solo al registrar este dispositivo por primera vez.</small>
+        </div>
+        <button type="submit">INGRESAR AL REVISOR</button>
+      </form>
+      <div id="accessStatus" class="access-status"></div>
+    </div>
+  </div>
   <main class="contenedor">
     <header class="encabezado">
-      <h1>REVISOR DE CARGO FISCAL</h1>
-      <p>Control de Inventario y Contrastación Institucional</p>
+      <h1>REVISOR DE CARGO FISCAL<br><span class="depto-titulo">DEPTO. L.5</span></h1>
     </header>
 
+    <section class="usuario" aria-label="Usuario activo">
+      <div><span>IDENTIFICACIÓN</span><strong id="usuarioIdentificacion">Sin configurar</strong></div>
+      <div><span>NIVEL DE USUARIO</span><strong id="usuarioNivel">Sin configurar</strong></div>
+      <div><span>UNIDAD</span><strong id="usuarioUnidad">Sin configurar</strong></div>
+    </section>
+    <div><button id="changeAccessAccount" class="accion secundaria" type="button">CAMBIAR CUENTA</button></div>
+    <div id="adminAccessBar" hidden>
+      <button id="manageAccessButton" class="accion secundaria" type="button">Gestionar accesos</button>
+    </div>
+    <section id="adminAccessPanel" class="admin-access admin-access-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="adminAccessTitle"><div class="admin-access-modal">
+      <div class="admin-access-header"><h2 id="adminAccessTitle">Accesos autorizados</h2><button id="adminClosePanel" class="accion secundaria admin-access-close" type="button">Cerrar</button></div>
+      <p class="admin-access-help">Autoriza solicitudes o agrega usuarios directamente. Cada cuenta admite 1 móvil/tablet y 1 computador.</p>
+      <form id="adminAddUserForm">
+        <label for="adminNewName">Nombre y apellido</label>
+        <input id="adminNewName" required minlength="3" maxlength="100" autocomplete="off">
+        <label for="adminNewEmail">Correo electrónico</label>
+        <input id="adminNewEmail" type="email" required autocomplete="off">
+        <button type="submit" class="accion secundaria">GUARDAR ACCESO</button>
+      </form>
+      <p id="adminAddStatus" role="status"></p>
+      <button id="adminRefreshList" class="accion secundaria" type="button">ACTUALIZAR SOLICITUDES</button>
+      <div id="adminAccessList"></div>
+    </div></section>
+
     <section class="barra" aria-label="Carga y acciones">
-      <label class="archivo">
-        <strong>📂 Seleccionar planilla Excel</strong>
-        <input id="archivo" type="file" accept=".xlsx,.xls">
-      </label>
-      <button id="descargar" class="accion primaria" type="button" disabled>💾 Descargar contraste</button>
-      <button id="reiniciar" class="accion peligro" type="button" disabled>Reiniciar revisión</button>
+      <div class="bloque-carga">
+        <span class="titulo-bloque">CARGAR PLANILLA DE CARGO FISCAL</span>
+        <label class="archivo">
+          <input id="archivo" type="file" accept=".xlsx,.xls" aria-label="Seleccionar planilla Excel">
+        </label>
+        <span id="nombreArchivoSeleccionado" class="nombre-archivo">Ningún archivo cargado</span>
+      </div>
+
+      <div class="bloque-informe">
+        <span class="titulo-bloque">GENERAR INFORME</span>
+        <div class="documentos">
+          <div class="campo-documento">
+            <label for="tipoDocumento">TIPO DE INFORME</label>
+            <select id="tipoDocumento">
+              <option value="informe-final">Informe Final</option>
+            </select>
+          </div>
+          <button id="generar" class="accion primaria" type="button" disabled>Generar informe</button>
+        </div>
+      </div>
+
+      <div class="bloque-gestion">
+        <span class="titulo-bloque">DESCARGA Y REINICIO</span>
+        <div class="acciones-archivo">
+          <button id="descargar" class="accion secundaria" type="button" disabled>💾 Descargar contraste</button>
+          <button id="reiniciar" class="accion peligro" type="button" disabled>Reiniciar revisión</button>
+        </div>
+      </div>
     </section>
 
-    <section class="metricas" aria-label="Resumen">
-      <div class="metrica"><strong id="total">0</strong>Total cargo</div>
-      <div class="metrica"><strong id="cantidadPendientes">0</strong>Pendientes</div>
-      <div class="metrica"><strong id="cantidadRevisados">0</strong>Constatados</div>
+    <section class="revision" aria-label="Selección y búsqueda">
+      <div class="campo-control campo-grupo">
+        <label for="grupo">GRUPO DE ESPECIES A REVISAR</label>
+        <select id="grupo" disabled>
+          <option value="">Cargue una planilla Excel</option>
+        </select>
+      </div>
+      <div class="campo-control campo-grupo">
+        <label for="subgrupo">SUBGRUPO</label>
+        <select id="subgrupo" disabled>
+          <option value="">Todos los subgrupos</option>
+        </select>
+      </div>
+      <div class="campo-control campo-busqueda">
+        <label for="busqueda">BUSCAR ESPECIE</label>
+        <input id="busqueda" type="search" placeholder="Código, nomenclatura, N.º de serie, piezas u observaciones…" disabled>
+      </div>
+      <div id="grupoInfo" class="grupo-info"></div>
+    </section>
+
+    <section id="fichaRevision" class="ficha" aria-label="Ficha de revisión" hidden></section>
+
+    <section class="metricas" aria-label="Resumen del grupo activo">
+      <div class="metrica"><strong id="total">0</strong><span>Registros del grupo</span></div>
+      <div class="metrica"><strong id="cantidadPendientes">0</strong><span>Pendientes</span></div>
+      <div class="metrica"><strong id="cantidadRevisados">0</strong><span>Constatados</span></div>
+      <div class="metrica"><strong id="cantidadNoRevisados">0</strong><span>No revisados</span></div>
     </section>
 
     <section class="columnas">
       <article class="panel">
-        <h2>🔴 PENDIENTES</h2>
+        <h2>🔴 PENDIENTES / NO REVISADAS</h2>
         <p>Toca un elemento para marcarlo como constatado.</p>
         <div id="pendientes" class="lista"></div>
       </article>
@@ -103,131 +394,2440 @@
         <div id="revisados" class="lista"></div>
       </article>
     </section>
+
     <p id="estado" class="estado" role="status"></p>
+
+    <footer class="pie-app" aria-label="Información de la aplicación">
+      <strong>Aplicación creada por J.R.G.C. © 2026</strong>
+      <span>Todos los derechos reservados.</span>
+      <small>Última actualización de la aplicación: 23-09-2026, 20:30 hrs.</small>
+    </footer>
   </main>
 
   <script>
-    const CLAVE = 'revisorCargoFiscal.v1';
-    let datos = cargarEstado() || { nombreArchivo: '', columnas: [], pendientes: [], revisados: [] };
+    const APP_BUILD = '2026-09-23-43';
+    const CLAVE = 'revisorCargoFiscal.v43';
+    const CLAVE_USUARIO = 'revisorCargoFiscal.usuario';
+    let USUARIO = cargarUsuarioInforme();
+    const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec';
+    const AUTH_STORAGE = 'revisorCargoFiscal.acceso.v1';
+    const ADMIN_EMAIL = 'john.green017@gmail.com';
+    const AUTH_ADMIN_REMEMBER = 'revisorCargoFiscal.admin.recordado.v1';
+    let SESION_ADMIN = null;
 
+    function authDeviceKey() {
+      try {
+        let key=localStorage.getItem('apps.admin.device.v1');
+        if(!key){const bytes=crypto.getRandomValues(new Uint8Array(32));key=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem('apps.admin.device.v1',key);}
+        if(!/^[a-f0-9]{64}$/.test(key))throw new Error('invalid');
+        const ua=navigator.userAgent||'',ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),mobile=ipad||/Mobi|Android|iPhone|iPod/i.test(ua);
+        return (mobile?'mobile':'desktop')+':'+key;
+      }catch(e){throw new Error('Habilita el almacenamiento del navegador y evita el modo privado para vincular este dispositivo.');}
+    }
+    async function authApi(accion,payload={}) {
+      const response=await fetch(AUTH_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({accion,...payload})});
+      const json=await response.json();if(!json.ok)throw new Error(json.error||'No fue posible completar la solicitud.');return json.data;
+    }
+    function authRead(){
+      if(SESION_ADMIN)return SESION_ADMIN;
+      try{
+        const saved=JSON.parse(localStorage.getItem(AUTH_STORAGE)||'null');
+        if(saved&&saved.owner){localStorage.removeItem(AUTH_STORAGE);return null;}
+        if(saved&&String(saved.email||'').trim().toLowerCase()===ADMIN_EMAIL){
+          localStorage.removeItem(AUTH_STORAGE);
+          localStorage.setItem(AUTH_ADMIN_REMEMBER,ADMIN_EMAIL);
+          return null;
+        }
+        return saved;
+      }catch(e){return null;}
+    }
+    function adminRemembered_(){try{return localStorage.getItem(AUTH_ADMIN_REMEMBER)===ADMIN_EMAIL;}catch(e){return false;}}
+    function authSave(data){
+      if(data&&data.owner){
+        SESION_ADMIN=data;
+        localStorage.setItem(AUTH_ADMIN_REMEMBER,ADMIN_EMAIL);
+        localStorage.removeItem(AUTH_STORAGE);
+      }else{
+        SESION_ADMIN=null;
+        if(data&&String(data.email||'').trim().toLowerCase()===ADMIN_EMAIL){
+          localStorage.setItem(AUTH_ADMIN_REMEMBER,ADMIN_EMAIL);
+          localStorage.removeItem(AUTH_STORAGE);
+          return;
+        }
+        localStorage.setItem(AUTH_STORAGE,JSON.stringify(data));
+      }
+    }
+    function authClear(forgetAdmin=false){SESION_ADMIN=null;localStorage.removeItem(AUTH_STORAGE);if(forgetAdmin)localStorage.removeItem(AUTH_ADMIN_REMEMBER);}
+    function authStatus(message,error=false){const el=document.getElementById('accessStatus');el.textContent=message||'';el.className='access-status '+(error?'error':'ok');}
+    function setAccessView(login){
+      document.getElementById('accessApplyForm').hidden=!!login;
+      document.getElementById('accessLoginForm').hidden=!login;
+      document.getElementById('accessHint').textContent=login?'Si ya te autorizaron previamente, ingresa tu correo para entrar.':'Ingresa tus datos. La solicitud quedará pendiente de autorización.';
+      document.getElementById('accessTabApply').classList.toggle('selected',!login);
+      document.getElementById('accessTabLogin').classList.toggle('selected',!!login);
+      document.getElementById('accessTabApply').setAttribute('aria-pressed',String(!login));
+      document.getElementById('accessTabLogin').setAttribute('aria-pressed',String(!!login));
+      authStatus('');
+    }
+    async function refreshAdminPassword(){
+      const email=document.getElementById('accessEmailLogin').value.trim().toLowerCase(),box=document.getElementById('accessAdminPasswordBox'),input=document.getElementById('accessAdminPassword');
+      if(!email){box.hidden=true;input.required=false;input.value='';return;}
+      try{const s=await authApi('prepararIngreso',{email,device:authDeviceKey()});const pedir=!!(s.owner&&s.requirePassword);box.hidden=!pedir;input.required=pedir;if(!pedir)input.value='';}
+      catch(e){box.hidden=false;input.required=true;}
+    }
+    function applyAuthRole(){
+      const a=authRead(),owner=!!(a&&a.owner);
+      document.getElementById('adminAccessBar').hidden=!owner;
+      if(!owner){document.getElementById('adminAccessPanel').hidden=true;document.body.classList.remove('admin-access-open');}
+    }
+    async function autoLoginAdmin_(){
+      const email=ADMIN_EMAIL;
+      try{
+        const state=await authApi('prepararIngreso',{email,device:authDeviceKey()});
+        if(!state||!state.owner)throw new Error('No fue posible reconocer la cuenta administradora.');
+        if(state.requirePassword){
+          if(adminRemembered_()){
+            document.getElementById('accessOverlay').hidden=false;
+            setAccessView(true);
+            document.getElementById('accessEmailLogin').value=email;
+            document.getElementById('accessTitle').textContent='ACCESO AL REVISOR';
+            document.getElementById('accessHint').textContent='Ingresa tu contraseña para volver a autorizar este dispositivo.';
+            await refreshAdminPassword();
+          }else{
+            document.getElementById('accessOverlay').hidden=false;
+            setAccessView(false);
+            applyAuthRole();
+          }
+          return;
+        }
+        document.getElementById('accessOverlay').hidden=false;
+        setAccessView(true);
+        document.getElementById('accessEmailLogin').value=email;
+        document.getElementById('accessTitle').textContent='VERIFICANDO ACCESO...';
+        document.getElementById('accessHint').textContent='Reconociendo este dispositivo de confianza.';
+        const r=await authApi('ingresar',{email,password:'',device:authDeviceKey()});
+        if(!r||!r.autorizado||!r.owner||!r.token)throw new Error('No fue posible iniciar la sesión de administrador.');
+        authSave({token:r.token,email:r.email||email,nombre:r.nombre||'Administrador',owner:true});
+        document.getElementById('accessAdminPassword').value='';
+        document.getElementById('accessOverlay').hidden=true;
+        document.getElementById('accessTitle').textContent='ACCESO AL REVISOR';
+        applyAuthRole();
+      }catch(e){
+        document.getElementById('accessTitle').textContent='ACCESO AL REVISOR';
+        if(adminRemembered_()){
+          document.getElementById('accessOverlay').hidden=false;
+          setAccessView(true);
+          document.getElementById('accessEmailLogin').value=email;
+          await refreshAdminPassword();
+          authStatus(e.message||String(e),true);
+        }else{
+          document.getElementById('accessOverlay').hidden=false;
+          setAccessView(false);
+          applyAuthRole();
+        }
+      }
+    }
+    async function verifyStoredAccess(){
+      const a=authRead();
+      if(adminRemembered_()&&(!a||String(a.email||'').trim().toLowerCase()===ADMIN_EMAIL||a.owner)){
+        await autoLoginAdmin_();
+        return;
+      }
+      if(!a||!a.token){
+        await autoLoginAdmin_();
+        return;
+      }
+      try{
+        const r=await authApi(a.owner?'verificarAdministrador':'verificarAcceso',{token:a.token,device:authDeviceKey()});
+        if(!r||!r.autorizado)throw new Error(r&&r.mensaje?r.mensaje:'Acceso no autorizado.');
+        document.getElementById('accessOverlay').hidden=true;applyAuthRole();
+      }catch(e){
+        authClear();
+        await autoLoginAdmin_();
+      }
+    }
+    async function loadAccessAdmin(){
+      const a=authRead(),list=document.getElementById('adminAccessList');list.textContent='Cargando...';
+      try{
+        const users=await authApi('listarAccesos',{token:a.token,device:authDeviceKey()});list.replaceChildren();
+        if(!users.length){list.textContent='No hay solicitudes registradas.';return;}
+        users.forEach(u=>{
+          const row=document.createElement('div');row.className='admin-user';
+          const info=document.createElement('div');info.textContent=(u.nombre?u.nombre+' · ':'')+u.email+' · '+u.status+' · Móvil: '+(u.mobileBound?'vinculado':'libre')+' · Escritorio: '+(u.desktopBound?'vinculado':'libre')+(u.lastConnectionAt?' · Última conexión: '+new Date(u.lastConnectionAt).toLocaleString('es-CL'):'');row.append(info);
+          const actions=document.createElement('div');actions.className='admin-actions';
+          const add=(label,handler)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',handler);actions.append(b);};
+          if(u.status!=='AUTORIZADO')add('Autorizar',()=>changeAccessUser(u.email,'AUTORIZADO'));
+          if(u.status!=='RECHAZADO')add('Rechazar / suspender',()=>changeAccessUser(u.email,'RECHAZADO'));
+          if(u.mobileBound||u.desktopBound)add('Restablecer dispositivos',()=>resetAccessDevices(u.email));
+          add('Eliminar',()=>changeAccessUser(u.email,'ELIMINAR'));row.append(actions);list.append(row);
+        });
+      }catch(e){list.textContent=e.message||String(e);}
+    }
+    async function changeAccessUser(email,status){
+      if(!confirm((status==='ELIMINAR'?'Eliminar cuenta':status==='AUTORIZADO'?'Autorizar':'Rechazar / suspender')+' para '+email+'?'))return;
+      const a=authRead();await authApi('actualizarAcceso',{token:a.token,email,status,device:authDeviceKey()});await loadAccessAdmin();
+    }
+    async function resetAccessDevices(email){
+      if(!confirm('Restablecer los dispositivos vinculados para '+email+'?'))return;
+      const a=authRead();await authApi('restablecerDispositivos',{token:a.token,email,device:authDeviceKey()});await loadAccessAdmin();
+    }
+    function initAccessSecurity(){
+      document.getElementById('accessTabApply').addEventListener('click',()=>setAccessView(false));
+      document.getElementById('accessTabLogin').addEventListener('click',()=>setAccessView(true));
+      document.getElementById('accessEmailLogin').addEventListener('input',refreshAdminPassword);
+      document.getElementById('accessApplyForm').addEventListener('submit',async e=>{
+        e.preventDefault();const name=document.getElementById('accessName').value.trim(),email=document.getElementById('accessEmailApply').value.trim().toLowerCase();
+        try{const r=await authApi('solicitarAcceso',{nombre:name,email,device:authDeviceKey()});if(r.token)authSave({token:r.token,email:r.email,nombre:r.nombre,owner:false});authStatus(r.mensaje||'Solicitud registrada.');}
+        catch(err){authStatus(err.message||String(err),true);}
+      });
+      document.getElementById('accessLoginForm').addEventListener('submit',async e=>{
+        e.preventDefault();const email=document.getElementById('accessEmailLogin').value.trim().toLowerCase();
+        try{
+          const r=await authApi('ingresar',{email,password:document.getElementById('accessAdminPassword').value,device:authDeviceKey()});
+          authSave({token:r.token,email:r.email,nombre:r.nombre||'',owner:!!r.owner});document.getElementById('accessAdminPassword').value='';document.getElementById('accessOverlay').hidden=true;applyAuthRole();
+        }catch(err){authStatus(err.message||String(err),true);await refreshAdminPassword();}
+      });
+      document.getElementById('changeAccessAccount').addEventListener('click',()=>{
+        if(!confirm('¿Cerrar esta sesión y entrar con otra cuenta?'))return;
+        authClear(true);applyAuthRole();
+        document.getElementById('accessOverlay').hidden=false;
+        document.getElementById('accessEmailLogin').value='';
+        document.getElementById('accessAdminPassword').value='';
+        setAccessView(true);
+      });
+      document.getElementById('adminAddUserForm').addEventListener('submit',async e=>{
+        e.preventDefault();const estado=document.getElementById('adminAddStatus');
+        const nombre=document.getElementById('adminNewName').value.trim(),email=document.getElementById('adminNewEmail').value.trim();
+        estado.textContent='Guardando...';
+        try {
+          const a=authRead();
+          await authApi('crearAcceso',{token:a.token,nombre,email,device:authDeviceKey()});
+          document.getElementById('adminAddUserForm').reset();
+          estado.textContent='Acceso autorizado para '+email+'.';
+          await loadAccessAdmin();
+        }catch(err){estado.textContent=err.message||'No se pudo guardar el acceso.';}
+      });
+      document.getElementById('adminRefreshList').addEventListener('click',loadAccessAdmin);
+      function closeAdminAccessPanel(){document.getElementById('adminAccessPanel').hidden=true;document.body.classList.remove('admin-access-open');}
+      document.getElementById('adminClosePanel').addEventListener('click',closeAdminAccessPanel);
+      document.getElementById('manageAccessButton').addEventListener('click',async()=>{
+        const panel=document.getElementById('adminAccessPanel');
+        if(!panel.hidden){closeAdminAccessPanel();return;}
+        panel.hidden=false;
+        document.body.classList.add('admin-access-open');
+        await loadAccessAdmin();
+      });
+      document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.getElementById('adminAccessPanel').hidden)closeAdminAccessPanel();});
+      setAccessView(false);verifyStoredAccess();
+
+    }
+    initAccessSecurity();
+    refrescarUsuarioVisible();
+
+    function refrescarUsuarioVisible() {
+      const a=USUARIO||{};
+      const i=document.getElementById('usuarioIdentificacion'),n=document.getElementById('usuarioNivel'),u=document.getElementById('usuarioUnidad');
+      if(i)i.textContent=a.identificacion||'Sin configurar';if(n)n.textContent=a.nivel||'Sin configurar';if(u)u.textContent=a.unidad||'Sin configurar';
+    }
+
+    function cargarUsuarioInforme() {
+      try {
+        const guardado = JSON.parse(localStorage.getItem(CLAVE_USUARIO) || '{}');
+        return {
+          identificacion: String(guardado.identificacion || ''),
+          nivel: String(guardado.nivel || ''),
+          unidad: String(guardado.unidad || '')
+        };
+      } catch (_) {
+        return { identificacion: '', nivel: '', unidad: '' };
+      }
+    }
+
+    function asegurarUsuarioInforme() {
+      if (USUARIO.identificacion && USUARIO.nivel && USUARIO.unidad) return true;
+
+      const identificacion = prompt('Identificación para el informe (grado y nombre):', USUARIO.identificacion || '');
+      if (identificacion === null) return false;
+      const nivel = prompt('Nivel o cargo para el informe:', USUARIO.nivel || '');
+      if (nivel === null) return false;
+      const unidad = prompt('Unidad para el informe:', USUARIO.unidad || '');
+      if (unidad === null) return false;
+
+      USUARIO = {
+        identificacion: identificacion.trim(),
+        nivel: nivel.trim(),
+        unidad: unidad.trim()
+      };
+      localStorage.setItem(CLAVE_USUARIO, JSON.stringify(USUARIO));
+      refrescarUsuarioVisible();
+      return true;
+    }
+
+    const ORDEN_SUBGRUPOS = [
+      'PISTOLAS',
+      'PISTOLAS AMETRALLADORAS UZI',
+      'ESCOPETAS',
+      'REVÓLVERES',
+      'CARABINAS LANZA GASES',
+      'ESPOSAS',
+      'CHALECOS ANTIBALAS',
+      'CASCOS',
+      'PROTECTORES',
+      'CONJUNTOS PERIFÉRICOS DE CHALECO ANTIBALAS',
+      'PROTECTORES INGUINALES',
+
+      'BASTONES',
+      'MUNICIÓN ANTIDISTURBIOS',
+      'MUNICIÓN Y CARTUCHOS',
+      'AGENTES QUÍMICOS, GRANADAS Y ACCESORIOS',
+      'ASEO Y MANTENCIÓN DE ARMAMENTO',
+      'CARGADORES DE ARMAMENTO',
+      'FUNDAS DE ARMAMENTO',
+      'ACCESORIOS SIP',
+      'ACCESORIOS PARA ESCOPETAS',
+      'HERRAMIENTAS',
+      'EQUIPAMIENTO VEHICULAR',
+      'EQUIPAMIENTO DE TRÁNSITO',
+      'BINOCULARES Y ACCESORIOS',
+
+      'ACCESORIOS CINTURÓN – GLOCK / POLÍMERO',
+      'ACCESORIOS CINTURÓN – PORTA CARGADORES P.A.',
+      'ACCESORIOS CINTURÓN – LONA VERDE OLIVA',
+      'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+      'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      'ACCESORIOS DE CINTURÓN – POLÍMERO / LONA VERDE',
+      'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      'CINTURÓN TÁCTICO NUEVO MODELO PT917 Y ACCESORIOS',
+      'CINTURÓN TÁCTICO POLIÉSTER TIP TOP',
+      'ACCESORIOS DE CINTURÓN – OTROS',
+
+      'ACCESORIOS DE CASCO',
+      'ACCESORIOS DE CHALECO ANTIBALAS',
+      'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+      'DETECTORES DE METALES Y ACCESORIOS',
+      'ESCUDOS ANTIBALÍSTICOS Y ACCESORIOS',
+      'ESCUDOS ANTIDISTURBIOS',
+      'EQUIPAMIENTO VEHICULAR',
+      'OTROS'
+    ];
+
+    let datos = cargarEstado() || {
+      nombreArchivo: '',
+      grupos: [],
+      grupoActivo: '',
+      subgrupoActivo: '',
+      busqueda: '',
+      destinosRevision: [],
+      ultimoDestinoRevision: ''
+    };
+
+    if (!Array.isArray(datos.destinosRevision)) datos.destinosRevision = [];
+    if (typeof datos.ultimoDestinoRevision !== 'string') datos.ultimoDestinoRevision = '';
+
+    const fichaEl = document.getElementById('fichaRevision');
     const archivo = document.getElementById('archivo');
+    const nombreArchivoEl = document.getElementById('nombreArchivoSeleccionado');
+    const grupoEl = document.getElementById('grupo');
+    const subgrupoEl = document.getElementById('subgrupo');
+    const busquedaEl = document.getElementById('busqueda');
+    const grupoInfoEl = document.getElementById('grupoInfo');
     const pendientesEl = document.getElementById('pendientes');
     const revisadosEl = document.getElementById('revisados');
     const estadoEl = document.getElementById('estado');
     const descargarBtn = document.getElementById('descargar');
     const reiniciarBtn = document.getElementById('reiniciar');
+    const generarBtn = document.getElementById('generar');
 
+    async function asegurarLectorExcel() {
+      if (typeof XLSX !== 'undefined') return;
+
+      const fuentes = [
+        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      ];
+
+      for (const src of fuentes) {
+        try {
+          await new Promise(function(resolve, reject) {
+            const script = document.createElement('script');
+            script.src = src;
+            script.integrity = 'sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==';
+            script.crossOrigin = 'anonymous';
+            script.referrerPolicy = 'no-referrer';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+          if (typeof XLSX !== 'undefined') return;
+        } catch (_) {}
+      }
+
+      throw new Error('No fue posible cargar el lector de Excel. Comprueba tu conexión y recarga la página.');
+    }
+
+    archivo.addEventListener('change', function() {
+      const seleccionado = archivo.files && archivo.files[0];
+      nombreArchivoEl.textContent = seleccionado
+        ? 'Archivo seleccionado: ' + seleccionado.name
+        : 'Ningún archivo cargado';
+      nombreArchivoEl.classList.toggle('cargado', Boolean(seleccionado));
+    });
     archivo.addEventListener('change', importarExcel);
+    grupoEl.addEventListener('change', cambiarGrupo);
+    subgrupoEl.addEventListener('change', cambiarSubgrupo);
+    busquedaEl.addEventListener('input', buscar);
     descargarBtn.addEventListener('click', descargarExcel);
     reiniciarBtn.addEventListener('click', reiniciar);
+    generarBtn.addEventListener('click', generarDocumentos);
 
     function cargarEstado() {
-      try { return JSON.parse(localStorage.getItem(CLAVE)); } catch (_) { return null; }
+      try {
+        const estado = JSON.parse(localStorage.getItem(CLAVE) || localStorage.getItem('revisorCargoFiscal.v41') || localStorage.getItem('revisorCargoFiscal.v40') || localStorage.getItem('revisorCargoFiscal.v39') || localStorage.getItem('revisorCargoFiscal.v38') || localStorage.getItem('revisorCargoFiscal.v37') || localStorage.getItem('revisorCargoFiscal.v36') || localStorage.getItem('revisorCargoFiscal.v35') || localStorage.getItem('revisorCargoFiscal.v34') || localStorage.getItem('revisorCargoFiscal.v33') || localStorage.getItem('revisorCargoFiscal.v32') || localStorage.getItem('revisorCargoFiscal.v31') || localStorage.getItem('revisorCargoFiscal.v30') || localStorage.getItem('revisorCargoFiscal.v29') || localStorage.getItem('revisorCargoFiscal.v28') || localStorage.getItem('revisorCargoFiscal.v27') || localStorage.getItem('revisorCargoFiscal.v26') || localStorage.getItem('revisorCargoFiscal.v25') || localStorage.getItem('revisorCargoFiscal.v23') || localStorage.getItem('revisorCargoFiscal.v22') || localStorage.getItem('revisorCargoFiscal.v21') || localStorage.getItem('revisorCargoFiscal.v20') || localStorage.getItem('revisorCargoFiscal.v19') || localStorage.getItem('revisorCargoFiscal.v18') || localStorage.getItem('revisorCargoFiscal.v17') || localStorage.getItem('revisorCargoFiscal.v16') || localStorage.getItem('revisorCargoFiscal.v15') || localStorage.getItem('revisorCargoFiscal.v14') || localStorage.getItem('revisorCargoFiscal.v13') || localStorage.getItem('revisorCargoFiscal.v12'));
+        return estado && Array.isArray(estado.grupos) ? estado : null;
+      } catch (_) {
+        return null;
+      }
     }
 
     function guardarEstado() {
       localStorage.setItem(CLAVE, JSON.stringify(datos));
     }
 
+    function limpiar(valor) {
+      return String(valor == null ? '' : valor)
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function limpiarConSeparacion(valor) {
+      return String(valor == null ? '' : valor)
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .trim();
+    }
+
+    function normalizar(valor) {
+      return limpiar(valor)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[º°]/g, 'o')
+        .replace(/[^\w\s.-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function numero(valor) {
+      if (typeof valor === 'number' && Number.isFinite(valor)) return valor;
+
+      let texto = String(valor == null ? '' : valor)
+        .trim()
+        .replace(/\s+/g, '')
+        .replace(/[^\d,.-]/g, '');
+
+      if (!texto) return 0;
+
+      const milesPunto = /^-?\d{1,3}(\.\d{3})+$/.test(texto);
+      const milesComa = /^-?\d{1,3}(,\d{3})+$/.test(texto);
+
+      if (milesPunto) {
+        texto = texto.replace(/\./g, '');
+      } else if (milesComa) {
+        texto = texto.replace(/,/g, '');
+      } else if (texto.includes('.') && texto.includes(',')) {
+        if (texto.lastIndexOf(',') > texto.lastIndexOf('.')) {
+          texto = texto.replace(/\./g, '').replace(',', '.');
+        } else {
+          texto = texto.replace(/,/g, '');
+        }
+      } else if (texto.includes(',')) {
+        texto = texto.replace(',', '.');
+      }
+
+      const n = Number(texto);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function claveSemantica(encabezado) {
+      const n = normalizar(encabezado).replace(/[.]/g, '');
+      if (!n) return '';
+
+      // Columnas generadas por la propia aplicación al descargar un contraste.
+      // Nunca deben interpretarse como campos oficiales de la planilla.
+      if (
+        n === 'subgrupo' ||
+        n === 'estado_revision' ||
+        n === 'tipo_estado' ||
+        n === 'cantidad_cargo' ||
+        n.startsWith('cantidad_revisada_') ||
+        n === 'cantidad_no_revisada' ||
+        n === 'cantidad_pendiente' ||
+        n === 'observaciones_revision' ||
+        n === 'motivo_no_revision' ||
+        n === 'destino_revision'
+      ) return '';
+
+      if (n.includes('pieza')) return 'piezas';
+      if (
+        n.includes('nro fab') || n.includes('numero fab') || n.includes('no fab') ||
+        n.includes('num fab') || n.includes('numero de serie') || n.includes('nro de serie') ||
+        n.includes('nro serie') || n === 'serie' || n.includes('serial')
+      ) return 'serie';
+      if (n.includes('observ') || n.includes('novedad') || n === 'estado' || n.includes('condicion')) return 'observaciones';
+      if (n.includes('codigo') || n === 'cod' || n.startsWith('cod ')) return 'codigo';
+      if (
+        n.includes('nomenclatura') || n.includes('descripcion') || n.includes('denominacion') ||
+        n === 'especie' || n.includes('detalle') || n.includes('material')
+      ) return 'nomenclatura';
+      if (n === 'cargo' || n.includes('cantidad') || n === 'cant' || n.includes('existencia') || n.includes('stock')) return 'cantidad';
+      if (n === 'reg' || n === 'registro' || n.includes('nro registro') || n.includes('numero registro')) return 'registro';
+      return '';
+    }
+
+    function filaVacia(fila) {
+      return !fila || !fila.some(function(valor) { return limpiar(valor) !== ''; });
+    }
+
+    function esFilaCierre(fila) {
+      const texto = normalizar((fila || []).map(limpiar).join(' '));
+      if (!texto) return false;
+      return (
+        texto.includes('no hay mas movimientos') ||
+        texto.includes('#value') ||
+        texto.includes('#ref') ||
+        texto.includes('#n/a') ||
+        texto === 'fin' ||
+        texto.startsWith('fin de listado')
+      );
+    }
+
+    function formatearCodigo(valor) {
+      const original = limpiar(valor);
+      if (!original) return '';
+      const compacto = original.replace(/[\s-]/g, '').toUpperCase();
+      if (/^\d{10}[0-9K]$/.test(compacto)) {
+        return compacto.slice(0, 10) + '-' + compacto.slice(10);
+      }
+      return original.toUpperCase();
+    }
+
+    function codigoComparable(valor) {
+      return formatearCodigo(valor).replace(/[^0-9A-Z]/g, '');
+    }
+
+    function separarCodigoDescripcion(valor) {
+      const texto = limpiarConSeparacion(valor);
+      if (!texto) return { codigo: '', nomenclatura: '' };
+
+      let coincidencia = texto.match(/^\s*([0-9A-Z-]{7,25})\s{2,}(.+?)\s*$/i);
+      if (!coincidencia) {
+        coincidencia = texto.match(/^\s*([0-9A-Z-]{9,20})\s+(.+?)\s*$/i);
+      }
+
+      if (coincidencia) {
+        return {
+          codigo: formatearCodigo(coincidencia[1]),
+          nomenclatura: limpiar(coincidencia[2])
+        };
+      }
+
+      return { codigo: '', nomenclatura: limpiar(texto) };
+    }
+
+    function clasificarSubgrupo(nomenclatura) {
+      const n = normalizar(nomenclatura);
+
+      if (!n) return 'OTROS';
+      if ((n.includes('pist') || n.includes('pistola')) && (n.includes('ametra') || n.includes('uzi'))) {
+        return 'PISTOLAS AMETRALLADORAS UZI';
+      }
+      if (n.includes('pistola') || /^pist[ .]/.test(n)) return 'PISTOLAS';
+      if (n.includes('escopeta') || n.includes('escop.')) return 'ESCOPETAS';
+      if (n.includes('revolver') || /^rev[ .]/.test(n)) return 'REVÓLVERES';
+      if ((n.includes('carab') && (n.includes('lanzagas') || n.includes('l gas') || n.includes('lanza gas'))) ||
+          n.includes('carabina lanza')) return 'CARABINAS LANZA GASES';
+      if (n.includes('esposa')) return 'ESPOSAS';
+
+      if (n.includes('conj') && n.includes('perif') && (n.includes('chal') || n.includes('antib'))) {
+        return 'CONJUNTOS PERIFÉRICOS DE CHALECO ANTIBALAS';
+      }
+      if (n.includes('protector') && (n.includes('ingle') || n.includes('inguinal'))) {
+        return 'PROTECTORES INGUINALES';
+      }
+      if (n.includes('casco')) return 'CASCOS';
+      if (n.includes('chal') && n.includes('antib')) return 'CHALECOS ANTIBALAS';
+      if (n.includes('protector') || n.includes('protecc')) return 'PROTECTORES';
+
+      return 'OTROS';
+    }
+
+    const SUBGRUPOS_OTRAS_POR_CODIGO = {
+      // Munición antidisturbios
+      '04040300010': 'MUNICIÓN ANTIDISTURBIOS',
+      '04080000060': 'MUNICIÓN ANTIDISTURBIOS',
+      '05010302066': 'MUNICIÓN ANTIDISTURBIOS',
+      '05010302074': 'MUNICIÓN ANTIDISTURBIOS',
+      '05010302139': 'MUNICIÓN ANTIDISTURBIOS',
+      '05010302163': 'MUNICIÓN ANTIDISTURBIOS',
+      '05010302228': 'MUNICIÓN ANTIDISTURBIOS',
+
+      // Cargadores de armamento
+      '07000907655': 'CARGADORES DE ARMAMENTO',
+      '07000907663': 'CARGADORES DE ARMAMENTO',
+      '07000908252': 'CARGADORES DE ARMAMENTO',
+      '07000910001': 'CARGADORES DE ARMAMENTO',
+      '07000911008': 'CARGADORES DE ARMAMENTO',
+
+      // Fundas de armamento
+      '07000907671': 'ACCESORIOS CINTURÓN – GLOCK / POLÍMERO',
+      '0700090768K': 'ACCESORIOS CINTURÓN – GLOCK / POLÍMERO',
+      '07060613413': 'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+      '07061104261': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '0706110427K': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104601': 'ACCESORIOS SIP',
+      '07061104806': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '07061104830': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104997': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+
+      // Agentes químicos, granadas y accesorios
+      '07001703018': 'AGENTES QUÍMICOS, GRANADAS Y ACCESORIOS',
+
+      // Accesorios de cinturón por familia/modelo y secuencia de código
+      '07000907698': 'ACCESORIOS CINTURÓN – GLOCK / POLÍMERO',
+      '07000907736': 'ACCESORIOS CINTURÓN – GLOCK / POLÍMERO',
+      '07001403014': 'ACCESORIOS CINTURÓN – PORTA CARGADORES P.A.',
+      '07060612093': 'ACCESORIOS CINTURÓN – LONA VERDE OLIVA',
+
+      '07060613405': 'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+      '07060613421': 'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+      '0706061343K': 'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+      '07060613448': 'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+      '07060613456': 'CINTURÓN TÁCTICO CORDURA NEGRO UU.EE. Y ACCESORIOS',
+
+      '07061104164': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104199': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104210': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104229': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104237': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104245': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+      '07061104288': 'CINTURÓN DE SERVICIO MODELO 2002 CAFÉ MORO Y ACCESORIOS',
+
+      '07061104563': 'ACCESORIOS SIP',
+      '07061104814': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+
+      '07061104873': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '07061104881': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '0706110489K': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '07061104903': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '07061104911': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '0706110492K': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+      '07061104938': 'CINTURÓN TÁCTICO CORDURA VERDE Y ACCESORIOS',
+
+      '07061105012': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105020': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105039': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105047': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105055': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105063': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105071': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '0706110508K': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105098': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+      '07061105101': 'CINTURÓN TÁCTICO VEGA HOLSTER Y ACCESORIOS',
+
+      '07061105233': 'CINTURÓN TÁCTICO NUEVO MODELO PT917 Y ACCESORIOS',
+      '0706110525K': 'CINTURÓN TÁCTICO NUEVO MODELO PT917 Y ACCESORIOS',
+      '07061105276': 'CINTURÓN TÁCTICO NUEVO MODELO PT917 Y ACCESORIOS',
+      '07061105292': 'CINTURÓN TÁCTICO NUEVO MODELO PT917 Y ACCESORIOS',
+
+      '07070700489': 'CINTURÓN TÁCTICO POLIÉSTER TIP TOP',
+
+      // Protectores antidisturbios y accesorios
+      '07070700136': 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+      '07070700152': 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+      '07070700179': 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+      '07070700497': 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+
+      // Consolidaciones funcionales aprobadas
+      '07001400023': 'HERRAMIENTAS',
+      '07001405017': 'HERRAMIENTAS',
+      '07001405076': 'HERRAMIENTAS',
+      '07020502066': 'HERRAMIENTAS',
+
+      '07001405122': 'EQUIPAMIENTO VEHICULAR',
+      '07001405343': 'EQUIPAMIENTO VEHICULAR',
+      '07001405351': 'EQUIPAMIENTO VEHICULAR',
+
+      '07050703058': 'EQUIPAMIENTO DE TRÁNSITO',
+      '07050703066': 'EQUIPAMIENTO DE TRÁNSITO',
+      '07050703090': 'EQUIPAMIENTO DE TRÁNSITO',
+
+      '07060801309': 'BINOCULARES Y ACCESORIOS',
+      '07060801317': 'BINOCULARES Y ACCESORIOS',
+      '07060801414': 'BINOCULARES Y ACCESORIOS',
+
+      // Correcciones de accesorios vinculados a su equipo principal
+      '07070608183': 'ACCESORIOS DE CHALECO ANTIBALAS',
+      '07070608191': 'ACCESORIOS DE CHALECO ANTIBALAS',
+      '07070608205': 'ACCESORIOS DE CHALECO ANTIBALAS',
+
+      '07070700209': 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+      '07070700373': 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS',
+
+      '07070902073': 'DETECTORES DE METALES Y ACCESORIOS',
+      '07070902103': 'DETECTORES DE METALES Y ACCESORIOS',
+
+      '07071001045': 'ESCUDOS ANTIBALÍSTICOS Y ACCESORIOS',
+      '07071001053': 'ESCUDOS ANTIBALÍSTICOS Y ACCESORIOS',
+      '07071001061': 'ESCUDOS ANTIBALÍSTICOS Y ACCESORIOS',
+
+      // Mantener clasificaciones específicas ya aprobadas
+      '07110401005': 'ASEO Y MANTENCIÓN DE ARMAMENTO'
+    };
+
+    function clasificarSubgrupoOtras(nomenclatura, codigoValor) {
+      const codigoExacto = codigoComparable(typeof codigoValor === 'undefined' ? '' : codigoValor);
+      if (SUBGRUPOS_OTRAS_POR_CODIGO[codigoExacto]) {
+        return SUBGRUPOS_OTRAS_POR_CODIGO[codigoExacto];
+      }
+
+      const n = normalizar(nomenclatura);
+
+      if (!n) return 'OTROS';
+
+      if (n.startsWith('baston ')) return 'BASTONES';
+      if (n.startsWith('cartucho ') || n.startsWith('cartuchos ') || n.startsWith('cts ') || n.startsWith('cts.')) return 'MUNICIÓN Y CARTUCHOS';
+      if (n.startsWith('granada ') || n.startsWith('gran ') || n.includes('lacrim') || n.includes('aerosol') || n.includes('spray pimienta')) return 'AGENTES QUÍMICOS, GRANADAS Y ACCESORIOS';
+      if (n.includes('liquido aseo arm') || n.includes('tullphant') || n.includes('gp-2000') || n.startsWith('baqueta') || n.startsWith('baquetas') || n.startsWith('escobillon') || n.startsWith('escobillones') || n.startsWith('escob ')) return 'ASEO Y MANTENCIÓN DE ARMAMENTO';
+
+
+      // Familias funcionales: agrupar accesorios por el equipo principal al que pertenecen.
+      if (
+        n.includes('visor casco') ||
+        ((n.startsWith('funda') || n.startsWith('fda ') || n.startsWith('fun ')) && n.includes('casco'))
+      ) return 'ACCESORIOS DE CASCO';
+
+      if (
+        n.startsWith('correa cint') ||
+        n.startsWith('cinturon ') ||
+        n.startsWith('cint ') ||
+        n.startsWith('faja ') ||
+        n.startsWith('porta esposa') ||
+        n.startsWith('porta radio') ||
+        n.startsWith('porta portatil') ||
+        n.includes('porta portátil') ||
+        n.startsWith('porta baston') ||
+        n.startsWith('tahali p/baston') ||
+        n.includes('tahali p/baston') ||
+        n.startsWith('porta linterna') ||
+        n.startsWith('tahali p/linterna') ||
+        n.includes('tahali p/linterna') ||
+        n.startsWith('pasador ') ||
+        n.startsWith('heb ') ||
+        n.includes('bolso tactico') ||
+        n.includes('bolso táctico') ||
+        n.includes('bolso p/cint') ||
+        n.includes('bolso para cinturon') ||
+        n.startsWith('porta cargador') ||
+        n.startsWith('porta carg') ||
+        n.includes('porta cargador doble') ||
+        n.includes('portacargador') ||
+        n.includes('portacarg')
+      ) return 'ACCESORIOS DE CINTURÓN – OTROS';
+
+
+      if (n.startsWith('cargador') || n.startsWith('carg ') || n.startsWith('carg.') || n.startsWith('carga metalico') || n.startsWith('carga.metalico') || n.includes('carg rapido para revolver')) {
+        if (n.includes('detector de metal') || n.includes('detector metal') || n.includes('escudo antib')) return 'CARGADORES Y BATERÍAS DE EQUIPOS';
+        return 'CARGADORES DE ARMAMENTO';
+      }
+
+      if (n.startsWith('funda') || n.startsWith('fda ') || n.startsWith('fun ')) {
+        if (n.includes('chal') && n.includes('antib')) return 'ACCESORIOS DE CHALECO ANTIBALAS';
+        if (n.includes('detector') && n.includes('metal')) return 'FUNDAS PARA DETECTORES DE METALES';
+        if (n.includes('esposa')) return 'FUNDAS PARA ESPOSAS';
+        if (n.includes('porta carg') || n.includes('portacarg')) return 'ACCESORIOS DE CINTURÓN – OTROS';
+        if (n.includes('cargador')) return 'FUNDAS PARA CARGADORES';
+        if (n.includes('pistola') || n.includes('pist ') || n.includes('pt917') || n.includes('glock19') || n.includes('jericho') || n.includes('taurus')) return 'FUNDAS DE ARMAMENTO';
+        return 'FUNDAS Y ESTUCHES';
+      }
+
+      if (n.startsWith('pistol grip') || n.includes('brechamiento') || n.includes('p/escopeta') || n.includes('para escopeta')) return 'ACCESORIOS PARA ESCOPETAS';
+      if (n.includes('uzi')) return n.includes('carg') ? 'CARGADORES DE ARMAMENTO' : 'ACCESORIOS PARA UZI';
+      if (n.includes('revolver')) return n.includes('carg') ? 'CARGADORES DE ARMAMENTO' : 'ACCESORIOS PARA REVÓLVERES';
+
+      if (n.startsWith('napoleon')) return 'HERRAMIENTAS';
+      if (n.startsWith('alicate')) return 'HERRAMIENTAS';
+      if (n.startsWith('foco ') || n.startsWith('linterna ')) return 'LINTERNAS';
+      if (n.startsWith('morral ') && (n.includes('granada') || n.includes('lacr'))) return 'AGENTES QUÍMICOS, GRANADAS Y ACCESORIOS';
+      if (n.startsWith('bolso ') || n.startsWith('morral ')) return 'BOLSOS Y MORRALES';
+
+      if (n.includes('esposa de seguridad desechable')) return 'ESPOSAS DESECHABLES';
+
+      if (n.startsWith('chalecos reflect') || n.startsWith('chaleco reflect')) return 'CHALECOS REFLECTANTES';
+      if (n.startsWith('guantes ')) return 'GUANTES';
+
+      if (n.startsWith('muslera ')) return 'MUSLERAS';
+
+      if (n.startsWith('cuerda de remolque') || n.includes('remolque trenzada')) return 'CUERDAS Y REMOLQUE';
+      if (n.startsWith('binocular ') || n.includes('binocular')) return 'BINOCULARES Y ACCESORIOS';
+      if (n.startsWith('cordon seguridad')) return 'CORDONES DE SEGURIDAD PARA ARMAMENTO';
+
+      if (n.startsWith('casco antid')) return 'CASCOS ANTIDISTURBIOS';
+      if (n.startsWith('lente protec')) return 'LENTES DE PROTECCIÓN';
+
+      if (n.startsWith('par protec') || n.startsWith('pares prot') || n.startsWith('protect ') || n.startsWith('protec ') || n.startsWith('protector genital')) return 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS';
+      if (n.startsWith('buzo antif')) return 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS';
+      if (n.includes('equipo antid') || n.includes('equipo a/dist')) return 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS';
+      if (n.startsWith('manta ignifuga')) return 'PROTECTORES ANTIDISTURBIOS Y ACCESORIOS';
+
+      if (n.includes('detector de metal') || n.includes('detector metal')) return 'DETECTORES DE METALES Y ACCESORIOS';
+      if (n.includes('escudo antib')) return 'ESCUDOS ANTIBALÍSTICOS Y ACCESORIOS';
+      if (n.includes('escudo antid')) return 'ESCUDOS ANTIDISTURBIOS';
+
+      return 'OTROS';
+    }
+
+    function mapaEncabezados(fila) {
+      const mapa = {};
+      (fila || []).forEach(function(valor, indice) {
+        const clave = claveSemantica(valor);
+        if (clave && mapa[clave] == null) mapa[clave] = indice;
+      });
+      return mapa;
+    }
+
+    function puntajeEncabezado(fila) {
+      return Object.keys(mapaEncabezados(fila)).length;
+    }
+
+    function detectarEncabezadoTabla(filas) {
+      const limite = Math.min(filas.length, 30);
+      let mejor = null;
+
+      for (let i = 0; i < limite; i++) {
+        const mapa = mapaEncabezados(filas[i]);
+        const claves = Object.keys(mapa);
+        const tieneIdentidad = mapa.codigo != null || mapa.nomenclatura != null;
+        const tieneDetalle = mapa.cantidad != null || mapa.serie != null || mapa.piezas != null || mapa.observaciones != null;
+
+        if (tieneIdentidad && tieneDetalle && claves.length >= 2) {
+          const puntaje =
+            claves.length +
+            (mapa.codigo != null ? 2 : 0) +
+            (mapa.nomenclatura != null ? 2 : 0) +
+            (mapa.serie != null ? 2 : 0);
+
+          if (!mejor || puntaje > mejor.puntaje) {
+            mejor = { indice: i, mapa: mapa, puntaje: puntaje };
+          }
+        }
+      }
+
+      return mejor;
+    }
+
+    function encabezadosUnicos(fila) {
+      const usados = {};
+      return (fila || []).map(function(valor, indice) {
+        let base = limpiar(valor) || ('Columna ' + (indice + 1));
+        if (!usados[base]) {
+          usados[base] = 1;
+          return base;
+        }
+        usados[base] += 1;
+        return base + ' ' + usados[base];
+      });
+    }
+
+    function etiquetaGrupo(tipo, nombreHoja, indice) {
+      const n = normalizar(nombreHoja);
+
+      if (tipo === 'general' || n.includes('total especie') || n.includes('listado general') || n === 'total') {
+        return 'LISTADO GENERAL';
+      }
+      if (n.includes('armamento') || n.includes('arma de fuego') || n.includes('armas de fuego') || n === 'armas') {
+        return 'ARMAS DE FUEGO';
+      }
+      if (n.includes('especie numerada') || n.includes('especies numeradas') || n.includes('numerada')) {
+        return 'ESPECIES NUMERADAS';
+      }
+      if (tipo === 'numerado') return 'ESPECIES NUMERADAS';
+      return limpiar(nombreHoja).toUpperCase() || ('GRUPO ' + (indice + 1));
+    }
+
+    function parsearTablaConvencional(filas, nombreHoja, indiceHoja) {
+      const deteccion = detectarEncabezadoTabla(filas);
+      if (!deteccion) return null;
+
+      const filaEncabezado = filas[deteccion.indice] || [];
+      const encabezados = encabezadosUnicos(filaEncabezado);
+      const mapa = deteccion.mapa;
+      const registros = [];
+
+      for (let i = deteccion.indice + 1; i < filas.length; i++) {
+        const fila = filas[i] || [];
+        if (filaVacia(fila) || esFilaCierre(fila)) continue;
+        if (puntajeEncabezado(fila) >= Math.max(2, Object.keys(mapa).length - 1)) continue;
+
+        const codigo = mapa.codigo != null ? limpiar(fila[mapa.codigo]) : '';
+        const nomenclatura = mapa.nomenclatura != null ? limpiar(fila[mapa.nomenclatura]) : '';
+        const serie = mapa.serie != null ? limpiar(fila[mapa.serie]) : '';
+        const cantidad = mapa.cantidad != null ? limpiar(fila[mapa.cantidad]) : '';
+
+        if (!codigo && !nomenclatura && !serie && !cantidad) continue;
+        if (codigo.startsWith('#') || nomenclatura.startsWith('#')) continue;
+
+        // En el listado general no se cargan especies cuyo cargo sea 0.
+        if (mapa.cantidad != null && numero(cantidad) <= 0) continue;
+
+        const objeto = {};
+        encabezados.forEach(function(encabezado, columna) {
+          const valor = limpiar(fila[columna]);
+          if (valor !== '') objeto[encabezado] = valor;
+        });
+
+        if (mapa.codigo != null && objeto[encabezados[mapa.codigo]] != null) {
+          objeto[encabezados[mapa.codigo]] = formatearCodigo(objeto[encabezados[mapa.codigo]]);
+        }
+
+        registros.push(objeto);
+      }
+
+      if (!registros.length) return null;
+
+      const tipo = mapa.serie != null ? 'numerado' : (mapa.cantidad != null ? 'general' : 'otro');
+      return construirGrupo(nombreHoja, indiceHoja, tipo, encabezados, registros, 'tabla');
+    }
+
+    function esMarcadorBloque(valor) {
+      const n = normalizar(valor);
+      return (
+        n === 'arma' ||
+        n === 'especie' ||
+        n === 'item' ||
+        n === 'articulo' ||
+        n === 'material' ||
+        n === 'elemento'
+      );
+    }
+
+    function parsearBloquesNumerados(filas, nombreHoja, indiceHoja) {
+      let actual = null;
+      let cabecerasDetalle = null;
+      let cantidadMarcadores = 0;
+      const registros = [];
+
+      for (let i = 0; i < filas.length; i++) {
+        const fila = filas[i] || [];
+        if (filaVacia(fila)) continue;
+        if (esFilaCierre(fila)) {
+          actual = null;
+          cabecerasDetalle = null;
+          continue;
+        }
+
+        const primera = limpiar(fila[0]);
+
+        if (esMarcadorBloque(primera)) {
+          cantidadMarcadores += 1;
+          const descriptor = fila.slice(1).map(limpiarConSeparacion).find(function(v) {
+            return limpiar(v) !== '';
+          }) || '';
+          actual = separarCodigoDescripcion(descriptor);
+          cabecerasDetalle = null;
+          continue;
+        }
+
+        if (actual) {
+          const mapa = mapaEncabezados(fila);
+          if (mapa.serie != null) {
+            cabecerasDetalle = mapa;
+            continue;
+          }
+        }
+
+        const primeraNormalizada = normalizar(primera);
+        if (
+          primeraNormalizada === 'unidad' ||
+          primeraNormalizada.includes('exportar a excel') ||
+          primeraNormalizada === 'reg' ||
+          primeraNormalizada === 'registro'
+        ) continue;
+
+        if (actual && cabecerasDetalle) {
+          const indiceSerie = cabecerasDetalle.serie;
+          const indicePiezas = cabecerasDetalle.piezas;
+          const indiceObs = cabecerasDetalle.observaciones;
+
+          const serie = indiceSerie != null ? limpiar(fila[indiceSerie]) : '';
+          const piezas = indicePiezas != null ? limpiar(fila[indicePiezas]) : '';
+          const observaciones = indiceObs != null ? limpiar(fila[indiceObs]) : '';
+
+          if (!serie || claveSemantica(serie)) continue;
+
+          registros.push({
+            'Código': actual.codigo,
+            'Nomenclatura': actual.nomenclatura,
+            'Nro. de serie': serie,
+            'Serie de piezas': piezas,
+            'Observaciones': observaciones
+          });
+        }
+      }
+
+      if (!cantidadMarcadores || !registros.length) return null;
+
+      return construirGrupo(
+        nombreHoja,
+        indiceHoja,
+        'numerado',
+        ['Código', 'Nomenclatura', 'Nro. de serie', 'Serie de piezas', 'Observaciones'],
+        registros,
+        'bloques'
+      );
+    }
+
+    function parsearGenerico(filas, nombreHoja, indiceHoja) {
+      const limite = Math.min(filas.length, 25);
+      let indiceEncabezado = -1;
+      let maxCeldas = 1;
+
+      for (let i = 0; i < limite; i++) {
+        const cantidad = (filas[i] || []).filter(function(v) { return limpiar(v) !== ''; }).length;
+        if (cantidad > maxCeldas) {
+          maxCeldas = cantidad;
+          indiceEncabezado = i;
+        }
+      }
+
+      if (indiceEncabezado < 0) return null;
+
+      const encabezados = encabezadosUnicos(filas[indiceEncabezado]);
+      const registros = [];
+
+      for (let i = indiceEncabezado + 1; i < filas.length; i++) {
+        const fila = filas[i] || [];
+        if (filaVacia(fila) || esFilaCierre(fila)) continue;
+
+        const objeto = {};
+        encabezados.forEach(function(encabezado, columna) {
+          const valor = limpiar(fila[columna]);
+          if (valor !== '') objeto[encabezado] = valor;
+        });
+
+        if (Object.keys(objeto).length) registros.push(objeto);
+      }
+
+      if (!registros.length) return null;
+      return construirGrupo(nombreHoja, indiceHoja, 'otro', encabezados, registros, 'generico');
+    }
+
+    function construirGrupo(nombreHoja, indiceHoja, tipo, columnas, registros, modo) {
+      const columnasUsadas = columnas.filter(function(columna) {
+        return registros.some(function(registro) { return limpiar(registro[columna]) !== ''; });
+      });
+
+      const grupo = {
+        id: 'grupo-' + (indiceHoja + 1),
+        indice: indiceHoja,
+        etiqueta: etiquetaGrupo(tipo, nombreHoja, indiceHoja),
+        nombreHoja: nombreHoja,
+        tipo: tipo,
+        modoLectura: modo,
+        columnas: columnasUsadas.length ? columnasUsadas : columnas,
+        pendientes: [],
+        revisados: []
+      };
+
+      registros.forEach(function(fila, indice) {
+        const item = { id: indice + 1, fila: fila, motivo: '', subgrupo: '' };
+        const campos = camposClaveDesdeColumnas(grupo.columnas);
+        const nom = campos.nomenclatura ? limpiar(fila[campos.nomenclatura]) : '';
+        item.subgrupo = clasificarSubgrupo(nom);
+        grupo.pendientes.push(item);
+      });
+
+      return grupo;
+    }
+
+    function analizarHoja(libro, nombreHoja, indiceHoja) {
+      const hoja = libro.Sheets[nombreHoja];
+      const filas = XLSX.utils.sheet_to_json(hoja, {
+        header: 1,
+        defval: '',
+        raw: false,
+        blankrows: false
+      });
+
+      if (!filas.length) return null;
+
+      const porBloques = parsearBloquesNumerados(filas, nombreHoja, indiceHoja);
+      if (porBloques) return porBloques;
+
+      const convencional = parsearTablaConvencional(filas, nombreHoja, indiceHoja);
+      if (convencional) return convencional;
+
+      return parsearGenerico(filas, nombreHoja, indiceHoja);
+    }
+
+    function camposClaveDesdeColumnas(columnas) {
+      const resultado = {
+        codigo: '',
+        nomenclatura: '',
+        cantidad: '',
+        serie: '',
+        piezas: '',
+        observaciones: ''
+      };
+
+      columnas.forEach(function(columna) {
+        const clave = claveSemantica(columna);
+        if (clave && Object.prototype.hasOwnProperty.call(resultado, clave) && !resultado[clave]) {
+          resultado[clave] = columna;
+        }
+      });
+
+      return resultado;
+    }
+
+    function camposClave(grupo) {
+      return camposClaveDesdeColumnas(grupo.columnas);
+    }
+
+    function vinculosDetalladosPorCodigo() {
+      const mapa = {};
+
+      datos.grupos
+        .filter(function(g) {
+          return g.tipo !== 'general' && g.tipo !== 'otras';
+        })
+        .forEach(function(grupo) {
+          const c = camposClave(grupo);
+          if (!c.codigo) return;
+
+          grupo.pendientes.forEach(function(item) {
+            const codigo = codigoComparable(item.fila[c.codigo]);
+            if (!codigo) return;
+            if (!mapa[codigo]) mapa[codigo] = { total: 0, revisados: 0, pendientes: 0 };
+            mapa[codigo].total += 1;
+            mapa[codigo].pendientes += 1;
+          });
+
+          grupo.revisados.forEach(function(item) {
+            const codigo = codigoComparable(item.fila[c.codigo]);
+            if (!codigo) return;
+            if (!mapa[codigo]) mapa[codigo] = { total: 0, revisados: 0, pendientes: 0 };
+            mapa[codigo].total += 1;
+            mapa[codigo].revisados += 1;
+          });
+        });
+
+      return mapa;
+    }
+
+    function crearGrupoOtrasEspecies() {
+      const general = datos.grupos.find(function(g) { return g.tipo === 'general'; });
+      if (!general) return;
+
+      datos.grupos = datos.grupos.filter(function(g) { return g.tipo !== 'otras'; });
+
+      const cGeneral = camposClave(general);
+      if (!cGeneral.codigo) return;
+
+      const codigosDetallados = new Set();
+
+      datos.grupos
+        .filter(function(g) { return g.tipo !== 'general'; })
+        .forEach(function(grupo) {
+          const c = camposClave(grupo);
+          if (!c.codigo) return;
+
+          grupo.pendientes.concat(grupo.revisados).forEach(function(item) {
+            const codigo = codigoComparable(item.fila[c.codigo]);
+            if (codigo) codigosDetallados.add(codigo);
+          });
+        });
+
+      const filasOtras = general.pendientes.concat(general.revisados)
+        .filter(function(item) {
+          const codigo = codigoComparable(item.fila[cGeneral.codigo]);
+          return codigo && !codigosDetallados.has(codigo);
+        })
+        .map(function(item) {
+          return Object.assign({}, item.fila);
+        });
+
+      if (!filasOtras.length) return;
+
+      const grupoOtras = {
+        id: 'grupo-otras',
+        indice: 999,
+        etiqueta: 'OTRAS ESPECIES',
+        nombreHoja: 'Derivado del Listado General',
+        tipo: 'otras',
+        modoLectura: 'derivado',
+        columnas: general.columnas.slice(),
+        pendientes: [],
+        revisados: []
+      };
+
+      filasOtras.forEach(function(fila, indice) {
+        const campos = camposClaveDesdeColumnas(grupoOtras.columnas);
+        const nom = campos.nomenclatura ? limpiar(fila[campos.nomenclatura]) : '';
+        const cod = campos.codigo ? limpiar(fila[campos.codigo]) : '';
+        grupoOtras.pendientes.push({
+          id: indice + 1,
+          fila: fila,
+          motivo: '',
+          subgrupo: clasificarSubgrupoOtras(nom, cod)
+        });
+      });
+
+      datos.grupos.push(grupoOtras);
+    }
+
+    function reclasificarOtrasEspecies() {
+      const grupo = datos.grupos.find(function(g) { return g.tipo === 'otras'; });
+      if (!grupo) return;
+      const c = camposClave(grupo);
+      grupo.pendientes.concat(grupo.revisados).forEach(function(item) {
+        const nom = c.nomenclatura ? limpiar(item.fila[c.nomenclatura]) : '';
+        const cod = c.codigo ? limpiar(item.fila[c.codigo]) : '';
+        item.subgrupo = clasificarSubgrupoOtras(nom, cod);
+      });
+    }
+
+    function reconstruirOtrasEspeciesPreservandoRevision() {
+      const general = datos.grupos.find(function(g) { return g.tipo === 'general'; });
+      if (!general) return;
+
+      const anterior = datos.grupos.find(function(g) { return g.tipo === 'otras'; });
+      const estados = {};
+
+      if (anterior) {
+        const cAnterior = camposClave(anterior);
+        anterior.pendientes.concat(anterior.revisados).forEach(function(item) {
+          const codigo = cAnterior.codigo ? codigoComparable(item.fila[cAnterior.codigo]) : '';
+          if (!codigo) return;
+          estados[codigo] = {
+            estabaRevisado: anterior.revisados.includes(item),
+            cantidadNormal: item.cantidadNormal || 0,
+            cantidadObservada: item.cantidadObservada || 0,
+            cantidadNoRevisada: item.cantidadNoRevisada || 0,
+            observacionRevision: item.observacionRevision || '',
+            motivoNoRevision: item.motivoNoRevision || '',
+            noRevisada: !!item.noRevisada
+          };
+        });
+      }
+
+      crearGrupoOtrasEspecies();
+
+      const nuevo = datos.grupos.find(function(g) { return g.tipo === 'otras'; });
+      if (!nuevo) return;
+
+      const cNuevo = camposClave(nuevo);
+      const pendientes = [];
+      const revisados = [];
+
+      nuevo.pendientes.forEach(function(item) {
+        const codigo = cNuevo.codigo ? codigoComparable(item.fila[cNuevo.codigo]) : '';
+        const previo = estados[codigo];
+        if (previo) {
+          item.cantidadNormal = previo.cantidadNormal;
+          item.cantidadObservada = previo.cantidadObservada;
+          item.cantidadNoRevisada = previo.cantidadNoRevisada;
+          item.observacionRevision = previo.observacionRevision;
+          item.motivoNoRevision = previo.motivoNoRevision;
+          item.noRevisada = previo.noRevisada;
+        }
+        const nom = cNuevo.nomenclatura ? limpiar(item.fila[cNuevo.nomenclatura]) : '';
+        const cod = cNuevo.codigo ? limpiar(item.fila[cNuevo.codigo]) : '';
+        item.subgrupo = clasificarSubgrupoOtras(nom, cod);
+
+        if (previo && previo.estabaRevisado && !previo.noRevisada) revisados.push(item);
+        else pendientes.push(item);
+      });
+
+      nuevo.pendientes = pendientes;
+      nuevo.revisados = revisados;
+    }
+
+    function sincronizarListadoGeneral() {
+      const general = datos.grupos.find(function(g) { return g.tipo === 'general'; });
+      if (!general) return;
+
+      const c = camposClave(general);
+      if (!c.codigo) return;
+
+      const vinculos = vinculosDetalladosPorCodigo();
+      const todos = general.pendientes.concat(general.revisados);
+      const nuevosPendientes = [];
+      const nuevosRevisados = [];
+
+      todos.forEach(function(item) {
+        const codigo = codigoComparable(item.fila[c.codigo]);
+        const v = vinculos[codigo];
+
+        item.automatico = true;
+        item.totalDetalle = v ? v.total : 0;
+        item.revisadosDetalle = v ? v.revisados : 0;
+
+        if (v && v.total > 0 && v.pendientes === 0) {
+          nuevosRevisados.push(item);
+        } else {
+          nuevosPendientes.push(item);
+        }
+      });
+
+      general.pendientes = nuevosPendientes;
+      general.revisados = nuevosRevisados;
+    }
+
     async function importarExcel(evento) {
-      const seleccionado = evento.target.files[0];
+      const seleccionado = evento.target.files && evento.target.files[0];
       if (!seleccionado) return;
+
+      const nombre = seleccionado.name || 'planilla.xlsx';
+      const extension = nombre.toLowerCase().split('.').pop();
+      if (!['xlsx','xls'].includes(extension)) {
+        estadoEl.textContent = 'Selecciona un archivo Excel .xlsx o .xls.';
+        archivo.value = '';
+        return;
+      }
+
+      const datosAnteriores = datos;
+
       try {
-        estadoEl.textContent = 'Leyendo planilla…';
+        estadoEl.textContent = 'Leyendo y analizando ' + nombre + '…';
+
+        await asegurarLectorExcel();
+
         const buffer = await seleccionado.arrayBuffer();
         const libro = XLSX.read(buffer, { type: 'array', cellDates: true });
-        const hoja = libro.Sheets[libro.SheetNames[0]];
-        const filas = XLSX.utils.sheet_to_json(hoja, { defval: '' });
-        if (!filas.length) throw new Error('La primera hoja no contiene registros.');
-        datos = {
-          nombreArchivo: seleccionado.name,
-          columnas: Object.keys(filas[0]),
-          pendientes: filas.map((fila, indice) => ({ id: indice + 1, fila })),
-          revisados: []
+
+        if (!libro.SheetNames || !libro.SheetNames.length) {
+          throw new Error('El archivo no contiene hojas reconocibles.');
+        }
+
+        const grupos = libro.SheetNames.map(function(nombreHoja, indice) {
+          return analizarHoja(libro, nombreHoja, indice);
+        }).filter(Boolean);
+
+        if (!grupos.length) {
+          throw new Error('No se pudo reconocer información utilizable en las hojas del archivo.');
+        }
+
+        const etiquetasUsadas = {};
+        grupos.forEach(function(grupo) {
+          const base = grupo.etiqueta;
+          etiquetasUsadas[base] = (etiquetasUsadas[base] || 0) + 1;
+          if (etiquetasUsadas[base] > 1) grupo.etiqueta = base + ' · ' + grupo.nombreHoja;
+        });
+
+        const nuevosDatos = {
+          nombreArchivo: nombre,
+          grupos: grupos,
+          grupoActivo: grupos[0].id,
+          subgrupoActivo: '',
+          busqueda: '',
+          destinosRevision: Array.isArray(datosAnteriores.destinosRevision)
+            ? datosAnteriores.destinosRevision.slice()
+            : [],
+          ultimoDestinoRevision: datosAnteriores.ultimoDestinoRevision || '',
+          clasificacionV12Aplicada: true
         };
+
+        datos = nuevosDatos;
+        crearGrupoOtrasEspecies();
+        reclasificarOtrasEspecies();
+        sincronizarListadoGeneral();
         guardarEstado();
-        estadoEl.textContent = 'Planilla cargada: ' + seleccionado.name;
+
+        const detalle = datos.grupos.map(function(g) {
+          return g.etiqueta + ': ' + (g.pendientes.length + g.revisados.length);
+        }).join(' · ');
+
+        estadoEl.textContent = 'Planilla cargada correctamente. ' + detalle;
         renderizar();
       } catch (error) {
-        estadoEl.textContent = 'No fue posible leer el archivo: ' + error.message;
+        datos = datosAnteriores;
+        const mensaje = 'No fue posible cargar el Excel: ' + (error && error.message ? error.message : String(error));
+        estadoEl.textContent = mensaje;
+        alert(mensaje);
       } finally {
         archivo.value = '';
       }
     }
 
-    function detalle(item) {
-      return datos.columnas
-        .filter(columna => item.fila[columna] !== '' && item.fila[columna] != null)
-        .map(columna => columna + ': ' + formatear(item.fila[columna]))
-        .join(' | ');
+    function grupoActivo() {
+      return datos.grupos.find(function(grupo) { return grupo.id === datos.grupoActivo; }) || null;
     }
 
-    function formatear(valor) {
-      if (valor instanceof Date) return valor.toLocaleDateString('es-CL');
-      return String(valor);
-    }
-
-    function mover(id, origen) {
-      const desde = datos[origen];
-      const destino = origen === 'pendientes' ? datos.revisados : datos.pendientes;
-      const indice = desde.findIndex(item => item.id === id);
-      if (indice < 0) return;
-      destino.push(desde.splice(indice, 1)[0]);
+    function cambiarGrupo() {
+      datos.grupoActivo = grupoEl.value;
+      datos.subgrupoActivo = '';
+      datos.busqueda = '';
+      busquedaEl.value = '';
+      cerrarFicha();
       guardarEstado();
       renderizar();
     }
 
-    function crearItem(item, origen) {
-      const boton = document.createElement('button');
-      boton.type = 'button';
-      boton.className = 'item';
-      boton.textContent = (origen === 'pendientes' ? '▫️ ' : '✅ ') + detalle(item);
-      boton.addEventListener('click', () => mover(item.id, origen));
-      return boton;
+    function cambiarSubgrupo() {
+      datos.subgrupoActivo = subgrupoEl.value;
+      cerrarFicha();
+      guardarEstado();
+      renderizar();
     }
 
-    function pintarLista(elemento, items, origen, mensaje) {
+    function busquedaActiva() {
+      return Boolean(normalizar(datos.busqueda));
+    }
+
+    function buscar() {
+      datos.busqueda = busquedaEl.value;
+      cerrarFicha();
+      guardarEstado();
+      renderizar();
+    }
+
+    function coincideBusquedaGlobal(item, grupo, termino) {
+      if (!termino) return true;
+      if (normalizar(grupo.etiqueta).includes(termino)) return true;
+      if (normalizar(item.subgrupo || '').includes(termino)) return true;
+
+      return Object.keys(item.fila).some(function(columna) {
+        return normalizar(columna).includes(termino) || normalizar(item.fila[columna]).includes(termino);
+      });
+    }
+
+    function coincideFiltros(item) {
+      const termino = normalizar(datos.busqueda);
+      if (termino) {
+        return Object.keys(item.fila).some(function(columna) {
+          return normalizar(columna).includes(termino) || normalizar(item.fila[columna]).includes(termino);
+        });
+      }
+      return !datos.subgrupoActivo || item.subgrupo === datos.subgrupoActivo;
+    }
+
+    function obtenerResultadosGlobales() {
+      const termino = normalizar(datos.busqueda);
+      const resultado = { pendientes: [], revisados: [] };
+      if (!termino) return resultado;
+
+      datos.grupos.forEach(function(grupo) {
+        // El listado general refleja las mismas especies y se excluye para evitar duplicados.
+        if (grupo.tipo === 'general') return;
+
+        grupo.pendientes.forEach(function(item) {
+          if (coincideBusquedaGlobal(item, grupo, termino)) {
+            resultado.pendientes.push({ item: item, grupo: grupo, origen: 'pendientes' });
+          }
+        });
+        grupo.revisados.forEach(function(item) {
+          if (coincideBusquedaGlobal(item, grupo, termino)) {
+            resultado.revisados.push({ item: item, grupo: grupo, origen: 'revisados' });
+          }
+        });
+      });
+
+      return resultado;
+    }
+
+    function formatear(valor) {
+      if (valor instanceof Date) return valor.toLocaleDateString('es-CL');
+      return limpiar(valor);
+    }
+
+    function tituloItem(item, grupo) {
+      const c = camposClave(grupo);
+      const partes = [];
+
+      if (c.codigo && limpiar(item.fila[c.codigo])) partes.push(formatear(item.fila[c.codigo]));
+      if (c.nomenclatura && limpiar(item.fila[c.nomenclatura])) partes.push(formatear(item.fila[c.nomenclatura]));
+      if (c.serie && limpiar(item.fila[c.serie])) partes.push('Serie ' + formatear(item.fila[c.serie]));
+
+      if (partes.length) return partes.join(' · ');
+      return detalleCompleto(item, grupo);
+    }
+
+    function esColumnaInternaRevision(columna) {
+      const n = normalizar(columna).replace(/[.]/g, '');
+      return (
+        n === 'subgrupo' ||
+        n === 'estado_revision' ||
+        n === 'tipo_estado' ||
+        n === 'cantidad_cargo' ||
+        n.startsWith('cantidad_revisada_') ||
+        n === 'cantidad_no_revisada' ||
+        n === 'cantidad_pendiente' ||
+        n === 'observaciones_revision' ||
+        n === 'motivo_no_revision' ||
+        n === 'destino_revision'
+      );
+    }
+
+    function esNovedadOficialReal(valor) {
+      const texto = limpiar(valor);
+      if (!texto) return false;
+      const n = normalizar(texto);
+      return !['0', '-', 's n', 'sn', 'sin novedad', 'ninguna', 'no aplica', 'n a'].includes(n);
+    }
+
+    function detalleSecundario(item, grupo) {
+      if (grupo.tipo === 'otras') return '';
+      const c = camposClave(grupo);
+      const principales = [c.codigo, c.nomenclatura, c.serie].filter(Boolean);
+      const excluidas = principales.concat([c.observaciones].filter(Boolean));
+      const preferidos = [c.cantidad, c.piezas].filter(Boolean);
+      const columnas = preferidos.concat(
+        grupo.columnas.filter(function(col) {
+          return !esColumnaInternaRevision(col) &&
+            !excluidas.includes(col) &&
+            !preferidos.includes(col);
+        })
+      );
+
+      return columnas
+        .filter(function(columna) { return limpiar(item.fila[columna]) !== ''; })
+        .slice(0, 6)
+        .map(function(columna) { return columna + ': ' + formatear(item.fila[columna]); })
+        .join(' | ');
+    }
+
+    function detalleCompleto(item, grupo) {
+      return grupo.columnas
+        .filter(function(columna) {
+          return !esColumnaInternaRevision(columna) && limpiar(item.fila[columna]) !== '';
+        })
+        .map(function(columna) { return columna + ': ' + formatear(item.fila[columna]); })
+        .join(' | ');
+    }
+
+    function cantidadCargo(item, grupo) {
+      const c = camposClave(grupo);
+      return grupo.tipo === 'otras' && c.cantidad
+        ? Math.max(0, Math.floor(numero(item.fila[c.cantidad]))) : 1;
+    }
+
+    function estadoFila(item, grupo) {
+      if (grupo.tipo === 'general') return item.automatico ? 'Automático' : 'Pendiente';
+      if (grupo.tipo === 'otras') {
+        const total = cantidadCargo(item, grupo);
+        const normal = Number(item.cantidadNormal || 0);
+        const observadas = Number(item.cantidadObservada || 0);
+        if (normal + observadas < total) return 'Pendiente';
+        return observadas > 0 ? 'Constatado con observaciones' : 'Constatado';
+      }
+      return item.observacionRevision ? 'Constatado con observaciones' : 'Constatado';
+    }
+
+    function cerrarFicha() {
+      fichaEl.replaceChildren();
+      fichaEl.hidden = true;
+    }
+
+    function textoUbicacion(item, grupo) {
+      return 'Grupo: ' + grupo.etiqueta + ' · Subgrupo: ' + (item.subgrupo || 'Sin subgrupo');
+    }
+
+    function mostrarUbicacion(item, grupo) {
+      cerrarFicha();
+      fichaEl.hidden = false;
+
+      const titulo = document.createElement('h2');
+      titulo.textContent = 'UBICACIÓN DE LA ESPECIE';
+      fichaEl.appendChild(titulo);
+
+      const detalle = document.createElement('p');
+      detalle.textContent = tituloItem(item, grupo);
+      fichaEl.appendChild(detalle);
+
+      const ubicacion = document.createElement('div');
+      ubicacion.className = 'ficha-ubicacion';
+      ubicacion.textContent = textoUbicacion(item, grupo);
+      fichaEl.appendChild(ubicacion);
+
+      const botones = document.createElement('div');
+      botones.className = 'botones';
+
+      const ir = document.createElement('button');
+      ir.type = 'button';
+      ir.className = 'accion primaria';
+      ir.textContent = 'Ir al grupo y subgrupo';
+      ir.addEventListener('click', function() {
+        datos.grupoActivo = grupo.id;
+        datos.subgrupoActivo = item.subgrupo || '';
+        datos.busqueda = '';
+        busquedaEl.value = '';
+        cerrarFicha();
+        renderizar();
+      });
+
+      const cerrar = document.createElement('button');
+      cerrar.type = 'button';
+      cerrar.className = 'accion secundaria';
+      cerrar.textContent = 'Cerrar';
+      cerrar.addEventListener('click', cerrarFicha);
+
+      botones.appendChild(ir);
+      botones.appendChild(cerrar);
+      fichaEl.appendChild(botones);
+      fichaEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function crearCampo(etiqueta, tipo, valor, maximo) {
+      const label = document.createElement('label');
+      label.textContent = etiqueta;
+      const control = document.createElement(tipo === 'textarea' ? 'textarea' : 'input');
+      if (tipo !== 'textarea') control.type = tipo;
+      control.value = valor == null ? '' : valor;
+      if (maximo != null) { control.min = '0'; control.max = String(maximo); control.step = '1'; }
+      label.appendChild(control);
+      return { label: label, control: control };
+    }
+
+    function registrarDestinoRevision(valor) {
+      const destino = limpiar(valor);
+      if (!destino) return '';
+
+      if (!Array.isArray(datos.destinosRevision)) datos.destinosRevision = [];
+      const existente = datos.destinosRevision.find(function(item) {
+        return normalizar(item) === normalizar(destino);
+      });
+      const definitivo = existente || destino;
+
+      if (!existente) datos.destinosRevision.push(definitivo);
+      datos.ultimoDestinoRevision = definitivo;
+      return definitivo;
+    }
+
+    function crearControlDestino(valorActual) {
+      if (!Array.isArray(datos.destinosRevision)) datos.destinosRevision = [];
+
+      const contenedor = document.createElement('div');
+      contenedor.className = 'control-destino';
+
+      const titulo = document.createElement('strong');
+      titulo.textContent = 'DESTINO DE LA ESPECIE (OPCIONAL)';
+      contenedor.appendChild(titulo);
+
+      const campos = document.createElement('div');
+      campos.className = 'destino-campos';
+
+      const labelGuardado = document.createElement('label');
+      labelGuardado.textContent = 'Destino guardado';
+      const selector = document.createElement('select');
+
+      const sinDestino = document.createElement('option');
+      sinDestino.value = '';
+      sinDestino.textContent = 'Sin destino';
+      selector.appendChild(sinDestino);
+
+      const preferido = limpiar(valorActual) || limpiar(datos.ultimoDestinoRevision);
+      if (preferido && !datos.destinosRevision.some(function(item) {
+        return normalizar(item) === normalizar(preferido);
+      })) {
+        datos.destinosRevision.push(preferido);
+      }
+
+      datos.destinosRevision.forEach(function(destino) {
+        const opcion = document.createElement('option');
+        opcion.value = destino;
+        opcion.textContent = destino;
+        selector.appendChild(opcion);
+      });
+      selector.value = preferido;
+      labelGuardado.appendChild(selector);
+
+      const labelNuevo = document.createElement('label');
+      labelNuevo.textContent = 'O crear un nuevo destino';
+      const nuevo = document.createElement('input');
+      nuevo.type = 'text';
+      nuevo.placeholder = 'Ej.: Bodega de armamento, Sumario, Reparación…';
+      labelNuevo.appendChild(nuevo);
+
+      campos.appendChild(labelGuardado);
+      campos.appendChild(labelNuevo);
+      contenedor.appendChild(campos);
+
+      return {
+        contenedor: contenedor,
+        obtenerValor: function() {
+          return limpiar(nuevo.value) || limpiar(selector.value);
+        }
+      };
+    }
+
+    function actualizarUbicacion(item, grupo, revisada) {
+      [grupo.pendientes, grupo.revisados].forEach(function(lista) {
+        const i = lista.indexOf(item);
+        if (i >= 0) lista.splice(i, 1);
+      });
+      (revisada ? grupo.revisados : grupo.pendientes).push(item);
+      sincronizarListadoGeneral();
+      guardarEstado();
+      cerrarFicha();
+      renderizar();
+    }
+
+    function constatarRapido(id, grupoForzado) {
+      const grupo = grupoForzado || grupoActivo();
+      if (!grupo || grupo.tipo === 'general') return;
+      const item = grupo.pendientes.concat(grupo.revisados).find(function(i) { return i.id === id; });
+      if (!item) return;
+      if (grupo.tipo === 'otras') {
+        const cantidad = cantidadCargo(item, grupo);
+        const observadas = Math.min(cantidad, Number(item.cantidadObservada || 0));
+        const noRevisadas = Math.min(cantidad-observadas,Number(item.cantidadNoRevisada || 0));
+        item.cantidadNormal = cantidad-observadas-noRevisadas;
+        item.cantidadNoRevisada = noRevisadas;
+        item.noRevisada = noRevisadas > 0;
+        actualizarUbicacion(item,grupo,noRevisadas === 0);
+      } else {
+        item.noRevisada = false;
+        item.motivoNoRevision = '';
+        item.destinoRevision = '';
+        actualizarUbicacion(item,grupo,true);
+      }
+    }
+
+    function marcarNoRevisadaCantidad(id, grupoForzado) {
+      const grupo = grupoForzado || grupoActivo();
+      if (!grupo || grupo.tipo !== 'otras') return;
+      const item = grupo.pendientes.concat(grupo.revisados).find(function(i) { return i.id === id; });
+      if (!item) return;
+
+      const cantidad = cantidadCargo(item, grupo);
+      item.cantidadNormal = 0;
+      item.cantidadObservada = 0;
+      item.cantidadNoRevisada = cantidad;
+      item.noRevisada = true;
+      actualizarUbicacion(item, grupo, true);
+    }
+
+    function editarItem(id, modo, grupoForzado) {
+      const grupo = grupoForzado || grupoActivo();
+      if (!grupo || grupo.tipo === 'general') return;
+      const item = grupo.pendientes.concat(grupo.revisados).find(function(i) { return i.id === id; });
+      if (!item) return;
+
+      cerrarFicha();
+      fichaEl.hidden = false;
+
+      const titulo = document.createElement('h2');
+      titulo.textContent = grupo.tipo === 'otras' ? 'OBSERVACIONES / CANTIDADES' : (modo === 'no' ? 'REGISTRAR NO REVISIÓN' : 'OBSERVACIONES');
+      fichaEl.appendChild(titulo);
+
+      const detalle = document.createElement('p');
+      detalle.textContent = tituloItem(item, grupo);
+      fichaEl.appendChild(detalle);
+
+      const ubicacion = document.createElement('div');
+      ubicacion.className = 'ficha-ubicacion';
+      ubicacion.textContent = textoUbicacion(item, grupo);
+      fichaEl.appendChild(ubicacion);
+
+      const esCantidad = grupo.tipo === 'otras';
+      const error = document.createElement('p');
+      error.className = 'error';
+      error.setAttribute('role','alert');
+
+      if (!esCantidad) {
+        // Especies individualizadas por número de serie: cantidad siempre 1.
+        if (modo === 'no') {
+          const motivo = crearCampo('Motivo por el que no fue revisada', 'textarea', item.motivoNoRevision || '');
+          const destino = crearControlDestino(item.destinoRevision || '');
+          fichaEl.appendChild(motivo.label);
+          fichaEl.appendChild(destino.contenedor);
+          fichaEl.appendChild(error);
+
+          const botones = document.createElement('div');
+          botones.className = 'botones';
+
+          const guardar = document.createElement('button');
+          guardar.type = 'button';
+          guardar.className = 'accion primaria';
+          guardar.textContent = 'Guardar no revisión';
+          guardar.addEventListener('click', function() {
+            const razon = motivo.control.value.trim();
+            if (!razon) {
+              error.textContent = 'Indica el motivo por el que no fue revisada.';
+              return;
+            }
+            item.noRevisada = true;
+            item.motivoNoRevision = razon;
+            item.observacionRevision = '';
+            item.destinoRevision = registrarDestinoRevision(destino.obtenerValor());
+            actualizarUbicacion(item, grupo, false);
+          });
+
+          const cancelar = document.createElement('button');
+          cancelar.type = 'button';
+          cancelar.className = 'accion secundaria';
+          cancelar.textContent = 'Cancelar';
+          cancelar.addEventListener('click', cerrarFicha);
+
+          botones.appendChild(guardar);
+          botones.appendChild(cancelar);
+          fichaEl.appendChild(botones);
+        } else {
+          const descripcion = crearCampo('Observaciones de la especie revisada', 'textarea', item.observacionRevision || '');
+          const destino = crearControlDestino(item.destinoRevision || '');
+          fichaEl.appendChild(descripcion.label);
+          fichaEl.appendChild(destino.contenedor);
+          fichaEl.appendChild(error);
+
+          const botones = document.createElement('div');
+          botones.className = 'botones';
+
+          const guardar = document.createElement('button');
+          guardar.type = 'button';
+          guardar.className = 'accion primaria';
+          guardar.textContent = 'Guardar observación';
+          guardar.addEventListener('click', function() {
+            item.noRevisada = false;
+            item.motivoNoRevision = '';
+            item.destinoRevision = '';
+            item.observacionRevision = descripcion.control.value.trim();
+            item.destinoRevision = item.observacionRevision
+              ? registrarDestinoRevision(destino.obtenerValor())
+              : '';
+            actualizarUbicacion(item, grupo, true);
+          });
+
+          const cancelar = document.createElement('button');
+          cancelar.type = 'button';
+          cancelar.className = 'accion secundaria';
+          cancelar.textContent = 'Cancelar';
+          cancelar.addEventListener('click', cerrarFicha);
+
+          botones.appendChild(guardar);
+          botones.appendChild(cancelar);
+          fichaEl.appendChild(botones);
+        }
+
+        fichaEl.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+
+      // Especies no individualizadas: mantener distribución por cantidades.
+      const campos = document.createElement('div');
+      campos.className = 'campos';
+
+      const cantidad = cantidadCargo(item, grupo);
+      const indicacion = document.createElement('p');
+      indicacion.textContent = 'Cargo: ' + cantidad + ' unidades. Distribuye las cantidades; las no asignadas permanecen pendientes.';
+      fichaEl.appendChild(indicacion);
+
+      const normal = crearCampo('Revisadas sin novedad', 'number',
+        item.cantidadNormal == null ? 0 : item.cantidadNormal, cantidad);
+      const observadas = crearCampo('Revisadas con observaciones', 'number',
+        item.cantidadObservada || 0, cantidad);
+      const noRevisadas = crearCampo('No revisadas (con motivo)', 'number',
+        item.cantidadNoRevisada || 0, cantidad);
+
+      campos.appendChild(normal.label);
+      campos.appendChild(observadas.label);
+      campos.appendChild(noRevisadas.label);
+      fichaEl.appendChild(campos);
+
+      const descripcion = crearCampo('Observaciones de las especies revisadas (solo si corresponde)',
+        'textarea', item.observacionRevision || '');
+      const motivo = crearCampo('Motivo de las especies NO revisadas',
+        'textarea', item.motivoNoRevision || '');
+      const destino = crearControlDestino(item.destinoRevision || '');
+
+      fichaEl.appendChild(descripcion.label);
+      fichaEl.appendChild(motivo.label);
+      fichaEl.appendChild(destino.contenedor);
+      fichaEl.appendChild(error);
+
+      const botones = document.createElement('div');
+      botones.className = 'botones';
+
+      const guardar = document.createElement('button');
+      guardar.type = 'button';
+      guardar.className = 'accion primaria';
+      guardar.textContent = 'Guardar resultado';
+      guardar.addEventListener('click', function() {
+        const obs = descripcion.control.value.trim();
+        const razon = motivo.control.value.trim();
+        const cap = cantidadCargo(item, grupo);
+        const n = Number(normal.control.value);
+        const o = Number(observadas.control.value);
+        const nr = Number(noRevisadas.control.value);
+
+        if ([n,o,nr].some(function(x){ return !Number.isInteger(x) || x < 0; }) || n + o + nr > cap) {
+          error.textContent = 'Las cantidades deben ser enteras y su suma no puede superar el cargo (' + cap + ').';
+          return;
+        }
+        if (o > 0 && !obs) {
+          error.textContent = 'Describe las observaciones de las unidades revisadas.';
+          return;
+        }
+        if (nr > 0 && !razon) {
+          error.textContent = 'Indica el motivo de las unidades no revisadas.';
+          return;
+        }
+
+        item.cantidadNormal = n;
+        item.cantidadObservada = o;
+        item.cantidadNoRevisada = nr;
+        item.observacionRevision = o ? obs : '';
+        item.motivoNoRevision = nr ? razon : '';
+        item.noRevisada = nr > 0;
+        item.destinoRevision = (o > 0 || nr > 0)
+          ? registrarDestinoRevision(destino.obtenerValor())
+          : '';
+        actualizarUbicacion(item, grupo, n + o === cap && nr === 0);
+      });
+
+      const cancelar = document.createElement('button');
+      cancelar.type = 'button';
+      cancelar.className = 'accion secundaria';
+      cancelar.textContent = 'Cancelar';
+      cancelar.addEventListener('click', cerrarFicha);
+
+      botones.appendChild(guardar);
+      botones.appendChild(cancelar);
+      fichaEl.appendChild(botones);
+      fichaEl.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    function crearItem(item, origen, grupo) {
+      const contenedor = document.createElement('div');
+      contenedor.className = 'item-contenedor';
+
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'item' + (grupo.tipo === 'general' ? ' automatico' : '');
+
+      const titulo = document.createElement('span');
+      titulo.className = 'item-titulo';
+      titulo.textContent = (origen === 'pendientes' ? '▫️ ' : '✅ ') + tituloItem(item, grupo);
+
+      const detalle = document.createElement('span');
+      if (grupo.tipo === 'general') {
+        const camposGeneral = camposClave(grupo);
+        detalle.className = 'item-cargo';
+        detalle.textContent = camposGeneral.cantidad && limpiar(item.fila[camposGeneral.cantidad])
+          ? 'Cargo: ' + formatear(item.fila[camposGeneral.cantidad])
+          : '';
+      } else {
+        detalle.className = 'item-detalle';
+        detalle.textContent = detalleSecundario(item, grupo);
+      }
+
+      boton.appendChild(titulo);
+      if (detalle.textContent) boton.appendChild(detalle);
+
+      if (busquedaActiva()) {
+        const ubicacion = document.createElement('span');
+        ubicacion.className = 'item-ubicacion';
+        ubicacion.textContent = textoUbicacion(item, grupo);
+        boton.appendChild(ubicacion);
+      }
+
+      // Toda novedad, estado, condición u observación proveniente de la
+      // planilla oficial debe permanecer visible y destacada.
+      const camposItem = camposClave(grupo);
+      const textoNovedadOficial = camposItem.observaciones
+        ? limpiar(item.fila[camposItem.observaciones])
+        : '';
+      if (esNovedadOficialReal(textoNovedadOficial)) {
+        const novedadOficial = document.createElement('span');
+        novedadOficial.className = 'item-novedad-oficial';
+        novedadOficial.textContent = 'ESTADO: ' + textoNovedadOficial;
+        boton.appendChild(novedadOficial);
+      }
+
+      const nota = document.createElement('span');
+      nota.className = 'item-auto';
+
+      if (grupo.tipo === 'general') {
+        boton.disabled = true;
+        contenedor.appendChild(boton);
+        return contenedor;
+      }
+
+      if (grupo.tipo === 'otras') {
+        const cap = cantidadCargo(item, grupo);
+        nota.textContent = 'Cargo: ' + cap +
+          ' · Revisadas sin novedad: ' + (item.cantidadNormal || 0) +
+          ' · Con observaciones: ' + (item.cantidadObservada || 0) +
+          ' · No revisadas: ' + (item.cantidadNoRevisada || 0) +
+          ' · Pendientes: ' + Math.max(0, cap -
+            (item.cantidadNormal || 0) -
+            (item.cantidadObservada || 0) -
+            (item.cantidadNoRevisada || 0));
+      } else {
+        nota.textContent = item.noRevisada
+          ? 'NO REVISADA · ' + (item.motivoNoRevision || '')
+          : item.observacionRevision
+            ? 'REVISADA CON OBSERVACIONES · ' + item.observacionRevision
+            : origen === 'revisados'
+              ? 'REVISADA SIN NOVEDAD'
+              : 'PENDIENTE';
+      }
+
+      if (item.destinoRevision) {
+        nota.textContent += ' · DESTINO: ' + item.destinoRevision;
+      }
+      boton.appendChild(nota);
+
+      // En ambas clases, tocar una tarjeta de la columna derecha fuera del botón de detalle
+      // la devuelve a la columna izquierda.
+      if (origen === 'revisados') {
+        boton.addEventListener('click', function() {
+          if (busquedaActiva()) {
+            mostrarUbicacion(item, grupo);
+            return;
+          }
+          if (grupo.tipo === 'otras') {
+            item.cantidadNormal = 0;
+            item.cantidadObservada = 0;
+            item.cantidadNoRevisada = 0;
+            item.observacionRevision = '';
+            item.motivoNoRevision = '';
+            item.destinoRevision = '';
+            item.noRevisada = false;
+          } else {
+            item.noRevisada = false;
+            item.motivoNoRevision = '';
+          }
+          actualizarUbicacion(item, grupo, false);
+        });
+      } else if (busquedaActiva()) {
+        boton.addEventListener('click', function() {
+          mostrarUbicacion(item, grupo);
+        });
+      }
+
+      contenedor.appendChild(boton);
+
+      const acciones = document.createElement('div');
+      acciones.className = 'item-acciones';
+
+      function accion(texto, fn, tipo) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'accion ' + (tipo || 'secundaria');
+        b.textContent = texto;
+        b.addEventListener('click', function(evento) {
+          evento.stopPropagation();
+          fn();
+        });
+        acciones.appendChild(b);
+      }
+
+      if (grupo.tipo !== 'otras') {
+        // Especies con número de serie: interfaz simplificada.
+        if (origen === 'pendientes') {
+          accion('✓ Revisada', function() {
+            constatarRapido(item.id, grupo);
+          }, 'primaria');
+
+          accion('No revisada', function() {
+            editarItem(item.id, 'no', grupo);
+          });
+        } else {
+          accion('Observaciones', function() {
+            editarItem(item.id, 'observacion', grupo);
+          });
+        }
+      } else {
+        // Especies no numeradas: izquierda = decisión rápida; derecha = detalle.
+        if (origen === 'pendientes') {
+          accion('✓ Revisada', function() {
+            constatarRapido(item.id, grupo);
+          }, 'primaria');
+          accion('No revisada', function() {
+            editarItem(item.id, 'no', grupo);
+          });
+        } else {
+          accion('Observaciones / cantidades', function() {
+            editarItem(item.id, 'detalle', grupo);
+          });
+        }
+      }
+
+      contenedor.appendChild(acciones);
+      return contenedor;
+    }
+
+    function pintarLista(elemento, items, origen, grupo, mensaje) {
       elemento.replaceChildren();
-      if (!items.length) {
+      const filtrados = items.filter(coincideFiltros);
+
+      if (!filtrados.length) {
+        const vacio = document.createElement('div');
+        vacio.className = 'vacio';
+        vacio.textContent =
+          (datos.busqueda || datos.subgrupoActivo) ?
+          'No hay coincidencias para los filtros seleccionados.' :
+          mensaje;
+        elemento.appendChild(vacio);
+        return 0;
+      }
+
+      filtrados.forEach(function(item) {
+        elemento.appendChild(crearItem(item, origen, grupo));
+      });
+      return filtrados.length;
+    }
+
+    function renderizarSelectorGrupo() {
+      grupoEl.replaceChildren();
+
+      if (!datos.grupos.length) {
+        const opcion = document.createElement('option');
+        opcion.value = '';
+        opcion.textContent = 'Cargue una planilla Excel';
+        grupoEl.appendChild(opcion);
+        grupoEl.disabled = true;
+        subgrupoEl.disabled = true;
+        busquedaEl.disabled = true;
+        return;
+      }
+
+      const ordenTipos = { general: 0, numerado: 2, otras: 3 };
+      const gruposOrdenados = datos.grupos.slice().sort(function(a, b) {
+        const ea = a.etiqueta === 'ARMAS DE FUEGO' ? 1 : (ordenTipos[a.tipo] != null ? ordenTipos[a.tipo] : 9);
+        const eb = b.etiqueta === 'ARMAS DE FUEGO' ? 1 : (ordenTipos[b.tipo] != null ? ordenTipos[b.tipo] : 9);
+        return ea - eb;
+      });
+
+      gruposOrdenados.forEach(function(grupo) {
+        const opcion = document.createElement('option');
+        opcion.value = grupo.id;
+        opcion.textContent = grupo.etiqueta + ' (' + (grupo.pendientes.length + grupo.revisados.length) + ')';
+        if (grupo.id === datos.grupoActivo) opcion.selected = true;
+        grupoEl.appendChild(opcion);
+      });
+
+      grupoEl.disabled = busquedaActiva();
+      busquedaEl.disabled = false;
+      busquedaEl.value = datos.busqueda || '';
+    }
+
+    function renderizarSelectorSubgrupo() {
+      const grupo = grupoActivo();
+      subgrupoEl.replaceChildren();
+
+      const todos = document.createElement('option');
+      todos.value = '';
+      todos.textContent = 'Todos los subgrupos';
+      subgrupoEl.appendChild(todos);
+
+      if (!grupo) {
+        subgrupoEl.disabled = true;
+        return;
+      }
+
+      if (grupo.tipo === 'general') {
+        subgrupoEl.disabled = true;
+        datos.subgrupoActivo = '';
+        todos.textContent = 'Sin subgrupos';
+        return;
+      }
+
+      const presentes = new Set(
+        grupo.pendientes.concat(grupo.revisados)
+          .map(function(item) { return item.subgrupo || 'OTROS'; })
+      );
+
+      const ordenados = Array.from(presentes).sort(function(a, b) {
+        const ia = ORDEN_SUBGRUPOS.indexOf(a);
+        const ib = ORDEN_SUBGRUPOS.indexOf(b);
+        if (ia >= 0 && ib >= 0) return ia - ib;
+        if (ia >= 0) return -1;
+        if (ib >= 0) return 1;
+        return a.localeCompare(b, 'es');
+      });
+
+      ordenados.forEach(function(nombre) {
+        const total = grupo.pendientes.concat(grupo.revisados)
+          .filter(function(item) { return item.subgrupo === nombre; }).length;
+
+        const opcion = document.createElement('option');
+        opcion.value = nombre;
+        opcion.textContent = nombre + ' (' + total + ')';
+        if (datos.subgrupoActivo === nombre) opcion.selected = true;
+        subgrupoEl.appendChild(opcion);
+      });
+
+      subgrupoEl.disabled = busquedaActiva() || presentes.size <= 1;
+    }
+
+    function pintarResultadosGlobales(elemento, resultados, mensaje) {
+      elemento.replaceChildren();
+
+      if (!resultados.length) {
         const vacio = document.createElement('div');
         vacio.className = 'vacio';
         vacio.textContent = mensaje;
         elemento.appendChild(vacio);
         return;
       }
-      items.forEach(item => elemento.appendChild(crearItem(item, origen)));
+
+      resultados.forEach(function(resultado) {
+        elemento.appendChild(crearItem(resultado.item, resultado.origen, resultado.grupo));
+      });
+    }
+
+    function renderizarListas() {
+      const grupo = grupoActivo();
+
+      if (busquedaActiva()) {
+        const resultados = obtenerResultadosGlobales();
+        pintarResultadosGlobales(
+          pendientesEl,
+          resultados.pendientes,
+          'No hay especies pendientes que coincidan con la búsqueda.'
+        );
+        pintarResultadosGlobales(
+          revisadosEl,
+          resultados.revisados,
+          'No hay especies constatadas que coincidan con la búsqueda.'
+        );
+        grupoInfoEl.textContent =
+          'Búsqueda transversal en todos los grupos y subgrupos · ' +
+          (resultados.pendientes.length + resultados.revisados.length) + ' coincidencias';
+        return;
+      }
+
+      if (!grupo) {
+        pendientesEl.innerHTML = '<div class="vacio">Cargue una planilla para comenzar.</div>';
+        revisadosEl.innerHTML = '<div class="vacio">Aún no hay elementos constatados.</div>';
+        grupoInfoEl.textContent = '';
+        return;
+      }
+
+      pintarLista(
+        pendientesEl, grupo.pendientes, 'pendientes', grupo, 'No hay elementos pendientes.'
+      );
+      pintarLista(
+        revisadosEl, grupo.revisados, 'revisados', grupo, 'Aún no hay elementos constatados.'
+      );
+
+      const totalGrupo = grupo.pendientes.length + grupo.revisados.length;
+      grupoInfoEl.textContent =
+        'Hoja: ' + grupo.nombreHoja +
+        ' · ' + totalGrupo + ' registros' +
+        (datos.subgrupoActivo ? ' · Subgrupo: ' + datos.subgrupoActivo : '');
     }
 
     function renderizar() {
-      const total = datos.pendientes.length + datos.revisados.length;
-      document.getElementById('total').textContent = total;
-      document.getElementById('cantidadPendientes').textContent = datos.pendientes.length;
-      document.getElementById('cantidadRevisados').textContent = datos.revisados.length;
-      descargarBtn.disabled = total === 0;
-      reiniciarBtn.disabled = total === 0;
-      pintarLista(pendientesEl, datos.pendientes, 'pendientes', 'No hay elementos pendientes.');
-      pintarLista(revisadosEl, datos.revisados, 'revisados', 'Aún no hay elementos constatados.');
-      if (total && datos.nombreArchivo) estadoEl.textContent = 'Revisión activa: ' + datos.nombreArchivo;
+      nombreArchivoEl.textContent = datos.nombreArchivo
+        ? 'Archivo cargado: ' + datos.nombreArchivo
+        : 'Ningún archivo cargado';
+      nombreArchivoEl.classList.toggle('cargado', Boolean(datos.nombreArchivo));
+
+      reclasificarOtrasEspecies();
+      sincronizarListadoGeneral();
+      renderizarSelectorGrupo();
+      renderizarSelectorSubgrupo();
+
+      const grupo = grupoActivo();
+      const totalGlobal = datos.grupos.reduce(function(suma, g) {
+        return suma + g.pendientes.length + g.revisados.length;
+      }, 0);
+
+      if (busquedaActiva()) {
+        const resultados = obtenerResultadosGlobales();
+        const pendientesGlobales = resultados.pendientes.filter(function(resultado) {
+          return !resultado.item.noRevisada;
+        }).length;
+        const noRevisadosGlobales = resultados.pendientes.filter(function(resultado) {
+          return resultado.item.noRevisada;
+        }).length;
+
+        document.getElementById('total').textContent =
+          resultados.pendientes.length + resultados.revisados.length;
+        document.getElementById('cantidadPendientes').textContent = pendientesGlobales;
+        document.getElementById('cantidadRevisados').textContent = resultados.revisados.length;
+        document.getElementById('cantidadNoRevisados').textContent = noRevisadosGlobales;
+      } else if (!grupo) {
+        document.getElementById('total').textContent = '0';
+        document.getElementById('cantidadPendientes').textContent = '0';
+        document.getElementById('cantidadRevisados').textContent = '0';
+        document.getElementById('cantidadNoRevisados').textContent = '0';
+      } else {
+        const todos = grupo.pendientes.concat(grupo.revisados);
+        const filtrados = datos.subgrupoActivo ?
+          todos.filter(function(item) { return item.subgrupo === datos.subgrupoActivo; }) :
+          todos;
+        const pendientes = filtrados.filter(function(item) {
+          return grupo.pendientes.some(function(p) { return p.id === item.id; }) && !item.noRevisada;
+        }).length;
+
+        document.getElementById('total').textContent = filtrados.length;
+        document.getElementById('cantidadPendientes').textContent = pendientes;
+        document.getElementById('cantidadRevisados').textContent = filtrados.filter(function(item){return grupo.revisados.includes(item);}).length;
+        document.getElementById('cantidadNoRevisados').textContent = filtrados.filter(function(item){return item.noRevisada;}).length;
+      }
+
+      descargarBtn.disabled = totalGlobal === 0;
+      reiniciarBtn.disabled = totalGlobal === 0;
+      generarBtn.disabled = totalGlobal === 0;
+
+      renderizarListas();
+
+      if (totalGlobal && datos.nombreArchivo && grupo) {
+        estadoEl.textContent = busquedaActiva()
+          ? 'Búsqueda transversal activa en toda la planilla: ' + datos.nombreArchivo
+          : 'Revisión activa: ' + datos.nombreArchivo +
+            ' · Grupo: ' + grupo.etiqueta +
+            (datos.subgrupoActivo ? ' · ' + datos.subgrupoActivo : '');
+      }
+
+      guardarEstado();
+    }
+
+    function nombreHojaSeguro(nombre, usadas) {
+      let base = String(nombre || 'Hoja').replace(/[\\\/?*\[\]:]/g, ' ').trim().slice(0, 31) || 'Hoja';
+      let candidato = base;
+      let numero = 2;
+
+      while (usadas.includes(candidato)) {
+        const sufijo = ' ' + numero++;
+        candidato = base.slice(0, 31 - sufijo.length) + sufijo;
+      }
+
+      usadas.push(candidato);
+      return candidato;
+    }
+
+    function filasConEstado(grupo) {
+      const filas=[];
+      function anexar(item,revisado){
+        const cap=cantidadCargo(item,grupo);
+        const normales=grupo.tipo==='otras'?Number(item.cantidadNormal||0):
+          (revisado&&!item.observacionRevision?1:0);
+        const observadas=grupo.tipo==='otras'?Number(item.cantidadObservada||0):
+          (revisado&&item.observacionRevision?1:0);
+        const noRevisadas=grupo.tipo==='otras'?Number(item.cantidadNoRevisada||0):
+          (item.noRevisada?1:0);
+        const pendientes=grupo.tipo==='general'?'':Math.max(0,cap-normales-observadas-noRevisadas);
+        const estado=grupo.tipo==='general'
+          ? (revisado?'Constatado automáticamente':'Pendiente automático')
+          : noRevisadas>0?(normales+observadas>0?'Revisión parcial / No revisadas':'No revisada')
+          : revisado?(observadas?'Revisada con observaciones':'Revisada')
+          : (normales+observadas>0?'Revisión parcial':'Pendiente');
+        filas.push(Object.assign({},item.fila,{
+          Subgrupo:grupo.tipo==='general'?'':(item.subgrupo||''),
+          Estado_revision:estado,
+          Tipo_estado:grupo.tipo==='general'?'Automático':'Manual',
+          Cantidad_cargo:cap,
+          Cantidad_revisada_sin_novedad:normales,
+          Cantidad_revisada_con_observaciones:observadas,
+          Cantidad_no_revisada:noRevisadas,
+          Cantidad_pendiente:pendientes,
+          Observaciones_revision:item.observacionRevision||'',
+          Motivo_no_revision:item.motivoNoRevision||'',
+          Destino_revision:item.destinoRevision||''
+        }));
+      }
+      grupo.pendientes.forEach(function(item){anexar(item,false);});
+      grupo.revisados.forEach(function(item){anexar(item,true);});
+      return filas;
     }
 
     function descargarExcel() {
-      const salida = [];
-      datos.pendientes.forEach(item => salida.push(Object.assign({}, item.fila, { Estado: 'Pendiente' })));
-      datos.revisados.forEach(item => salida.push(Object.assign({}, item.fila, { Estado: 'Constatado' })));
-      const hoja = XLSX.utils.json_to_sheet(salida, { header: datos.columnas.concat('Estado') });
+      sincronizarListadoGeneral();
+
       const libro = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(libro, hoja, 'Contrastación');
-      XLSX.writeFile(libro, 'Cargo_Fiscal_Constatado.xlsx');
+      const usadas = [];
+
+      datos.grupos.forEach(function(grupo) {
+        const filas = filasConEstado(grupo);
+        const encabezados = grupo.columnas.concat(['Subgrupo', 'Estado_revision', 'Tipo_estado', 'Cantidad_cargo', 'Cantidad_revisada_sin_novedad', 'Cantidad_revisada_con_observaciones', 'Cantidad_no_revisada', 'Cantidad_pendiente', 'Observaciones_revision', 'Motivo_no_revision', 'Destino_revision']);
+        const hoja = XLSX.utils.json_to_sheet(filas, { header: encabezados });
+        XLSX.utils.book_append_sheet(libro, hoja, nombreHojaSeguro(grupo.etiqueta, usadas));
+      });
+
+      XLSX.writeFile(libro, 'Cargo_Fiscal_Contrastado.xlsx');
+      estadoEl.textContent = 'Contraste completo descargado con estados automáticos sincronizados.';
+    }
+
+    function generarDocumentos() {
+      sincronizarListadoGeneral();
+      if (!asegurarUsuarioInforme()) {
+        estadoEl.textContent = 'Generación de informe cancelada.';
+        return;
+      }
+
+      const libro = XLSX.utils.book_new();
+      const usadas = ['Resumen'];
+
+      const total = datos.grupos.reduce(function(suma, g) {
+        return suma + g.pendientes.length + g.revisados.length;
+      }, 0);
+      const revisados = datos.grupos.reduce(function(suma, g) {
+        return suma + g.revisados.length;
+      }, 0);
+      const pendientes = datos.grupos.reduce(function(suma, g) {
+        return suma + g.pendientes.length;
+      }, 0);
+
+      const resumen = [
+        ['REVISOR DE CARGO FISCAL'],
+        ['Identificación', USUARIO.identificacion],
+        ['Nivel de usuario', USUARIO.nivel],
+        ['Unidad', USUARIO.unidad],
+        ['Archivo de origen', datos.nombreArchivo],
+        ['Total de registros reconocidos', total],
+        ['Constatados', revisados],
+        ['No constatados / pendientes', pendientes],
+        ['Fecha de generación', new Date().toLocaleString('es-CL')]
+      ];
+
+      datos.grupos.forEach(function(g) {
+        resumen.push([g.etiqueta + ' - Total', g.pendientes.length + g.revisados.length]);
+        resumen.push([g.etiqueta + ' - Constatados', g.revisados.length]);
+        resumen.push([g.etiqueta + ' - Pendientes', g.pendientes.length]);
+      });
+
+      XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
+
+      datos.grupos.forEach(function(grupo) {
+        const encabezados = grupo.columnas.concat(['Subgrupo', 'Estado_revision', 'Tipo_estado', 'Cantidad_cargo', 'Cantidad_revisada_sin_novedad', 'Cantidad_revisada_con_observaciones', 'Cantidad_no_revisada', 'Cantidad_pendiente', 'Observaciones_revision', 'Motivo_no_revision', 'Destino_revision']);
+        const hoja = XLSX.utils.json_to_sheet(filasConEstado(grupo), { header: encabezados });
+        XLSX.utils.book_append_sheet(libro, hoja, nombreHojaSeguro(grupo.etiqueta, usadas));
+      });
+
+      XLSX.writeFile(libro, 'Informe_Final_Detalle_Contrastacion.xlsx');
+      estadoEl.textContent = 'Excel del Informe Final generado. El Word continúa pendiente de definición.';
     }
 
     function reiniciar() {
-      if (!confirm('¿Deseas borrar la revisión actual y cargar una nueva planilla?')) return;
+      if (!confirm('Esta acción eliminará toda la revisión guardada, incluidos los destinos creados, y no se puede deshacer.\n\n¿Deseas reiniciar la revisión?')) return;
+
+      for (let version = 1; version <= 42; version += 1) {
+        localStorage.removeItem('revisorCargoFiscal.v' + version);
+      }
       localStorage.removeItem(CLAVE);
-      datos = { nombreArchivo: '', columnas: [], pendientes: [], revisados: [] };
-      estadoEl.textContent = 'Revisión reiniciada.';
+
+      datos = {
+        nombreArchivo: '',
+        grupos: [],
+        grupoActivo: '',
+        subgrupoActivo: '',
+        busqueda: '',
+        destinosRevision: [],
+        ultimoDestinoRevision: '',
+        clasificacionV12Aplicada: false
+      };
+
+      estadoEl.textContent = 'Revisión reiniciada. También se eliminaron los destinos guardados.';
       renderizar();
     }
 
+    document.documentElement.dataset.appBuild = APP_BUILD;
     renderizar();
   </script>
 </body>
