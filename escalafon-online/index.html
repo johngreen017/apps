@@ -153,7 +153,7 @@
       let trustedGoogleOrigin = false;
       try {
         const hostname = new URL(event.origin).hostname;
-        trustedGoogleOrigin = event.origin === 'https://script.google.com' || hostname === 'googleusercontent.com' || hostname.endsWith('.googleusercontent.com');
+        trustedGoogleOrigin = event.origin === 'null' || event.origin === 'https://script.google.com' || hostname === 'googleusercontent.com' || hostname.endsWith('.googleusercontent.com');
       } catch (error) {}
       if (!trustedGoogleOrigin || !event.source || !event.data) return;
       if (event.data.type === 'escalafon-request-device-key') {
