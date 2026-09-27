@@ -49,7 +49,7 @@
   <section id="googleLoginLayer" class="google-login-layer" aria-label="Acceso del administrador con Google" hidden>
     <p class="google-login-label">Administrador: acceso seguro con Google</p>
     <div id="googleOwnerButton"></div>
-    <p id="googleOwnerStatus">También puedes ingresar con tu contraseña.</p>
+    <p id="googleOwnerStatus">Después del primer acceso, este dispositivo será reconocido automáticamente.</p>
   </section>
   <button id="pushButton" class="push-button" type="button" hidden>Activar notificaciones</button>
   <noscript>Activa JavaScript para abrir Escalafón Online.</noscript>
@@ -164,7 +164,7 @@
         appMessageSource = event.source;
         googleLoginLayer.hidden = event.data.visible !== true;
         googleLoginRequested = false;
-        googleOwnerStatus.textContent = 'También puedes ingresar con tu contraseña.';
+        googleOwnerStatus.textContent = 'Después del primer acceso, este dispositivo será reconocido automáticamente.';
         if (!googleLoginLayer.hidden) initGoogleOwnerButton();
       }
       if (event.data.type === 'escalafon-google-result') {
