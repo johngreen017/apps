@@ -17,7 +17,7 @@
   <link rel="apple-touch-icon" sizes="167x167" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/icons-v6/apple-touch-icon-167.png?v=6">
   <link rel="apple-touch-icon" sizes="152x152" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/icons-v6/apple-touch-icon-152.png?v=6">
   <link rel="manifest" href="https://johngreen017.github.io/apps/revisor-cargo-fiscal/manifest.webmanifest?v=6">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     :root {
@@ -792,7 +792,8 @@
       if (typeof XLSX !== 'undefined') return;
 
       const fuentes = [
-        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+        'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
       ];
 
       for (const src of fuentes) {
@@ -800,9 +801,6 @@
           await new Promise(function(resolve, reject) {
             const script = document.createElement('script');
             script.src = src;
-            script.integrity = 'sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==';
-            script.crossOrigin = 'anonymous';
-            script.referrerPolicy = 'no-referrer';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
