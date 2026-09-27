@@ -72,9 +72,13 @@
             googleOwnerStatus.textContent = 'Google no entregó una credencial válida. Inténtalo nuevamente.';
             return;
           }
+          if (!appMessageSource) {
+            googleOwnerStatus.textContent = 'El portal todavía se está cargando. Inténtalo nuevamente en unos segundos.';
+            return;
+          }
           googleLoginRequested = true;
           googleOwnerStatus.textContent = 'Validando la cuenta…';
-          appFrame.contentWindow.postMessage({type:'escalafon-google-credential',credential:credential}, '*');
+          sendToApp({type:'escalafon-google-credential',credential:credential});
         },
         auto_select: false,
         cancel_on_tap_outside: false
@@ -111,8 +115,9 @@
 
     function shareStableDevice() {
       const device=stableAdminDeviceKey();
-      if (device && appFrame.contentWindow) {
-        appFrame.contentWindow.postMessage({type:'escalafon-device-key',device},'*');
+      const target=appMessageSource||appFrame.contentWindow;
+      if (device && target) {
+        target.postMessage({type:'escalafon-device-key',device},'*');
       }
     }
 
@@ -150,12 +155,13 @@
         const hostname = new URL(event.origin).hostname;
         trustedGoogleOrigin = event.origin === 'https://script.google.com' || hostname === 'googleusercontent.com' || hostname.endsWith('.googleusercontent.com');
       } catch (error) {}
-      if (!trustedGoogleOrigin || event.source!==appFrame.contentWindow || !event.data) return;
+      if (!trustedGoogleOrigin || !event.source || !event.data) return;
       if (event.data.type === 'escalafon-request-device-key') {
         appMessageSource = event.source;
         shareStableDevice();
       }
       if (event.data.type === 'escalafon-google-login') {
+        appMessageSource = event.source;
         googleLoginLayer.hidden = event.data.visible !== true;
         googleLoginRequested = false;
         googleOwnerStatus.textContent = 'También puedes ingresar con tu contraseña.';
