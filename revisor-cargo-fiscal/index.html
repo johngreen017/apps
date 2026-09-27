@@ -541,7 +541,9 @@
             await refreshAdminPassword();
           }else{
             document.getElementById('accessOverlay').hidden=false;
-            setAccessView(false);
+            setAccessView(true);
+            document.getElementById('accessEmailLogin').value=email;
+            await refreshAdminPassword();
             applyAuthRole();
           }
           return;
