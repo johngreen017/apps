@@ -436,6 +436,7 @@
       #panelGestionAccesos #formAgregarAcceso{padding:14px 12px 16px}
     }
   </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -661,11 +662,12 @@
           <label for="correoRecuperar">Ingresa tu correo autorizado</label>
           <input type="email" id="correoRecuperar" autocomplete="email" placeholder="correo@ejemplo.com" oninput="actualizarClaveAdministrador()">
         </div>
-        <div id="bloqueClaveAdmin" class="oculto">
+        <div id="bloqueClaveAdmin" class="oculto" aria-hidden="true">
           <label for="claveAdministrador">Contraseña de administrador</label>
-          <input type="password" id="claveAdministrador" autocomplete="current-password">
-          <div class="ayuda-campo">Se solicita solo al registrar este dispositivo por primera vez.</div>
+          <input type="password" id="claveAdministrador" autocomplete="current-password" disabled>
+          <div class="ayuda-campo">El administrador ingresa con Google.</div>
         </div>
+        <div id="adminGoogleArea" class="oculto"><div id="adminGoogleButton"></div></div>
         <button id="botonRecuperar" type="button" onclick="recuperarAccesoUsuario()">
           INGRESAR AL SIMULADOR
         </button>
@@ -690,6 +692,7 @@
     const CLAVE_ACCESO = "simuladorRemuneracionesAcceso";
     const ADMIN_EMAIL = "john.green017@gmail.com";
     const CLAVE_ADMIN_RECORDADO = "simulador.admin.recordado.v1";
+    const ADMIN_GOOGLE_CLIENT_ID = "892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com";
     let SESION_ADMIN = null;
 
     function deviceKey() {
@@ -710,6 +713,16 @@
       }
     }
 
+    function adminDeviceKey_() {
+      try {
+        const type=deviceKey().split(":")[0],keyName="simulador.admin.device.v1";
+        let key=localStorage.getItem(keyName);
+        if(!key){const bytes=crypto.getRandomValues(new Uint8Array(32));key=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");localStorage.setItem(keyName,key);}
+        if(!/^[a-f0-9]{64}$/.test(key))throw new Error("invalid");
+        return type+":"+key;
+      } catch(e) { throw new Error("Habilita el almacenamiento del navegador para reconocer este dispositivo."); }
+    }
+    function sessionDeviceKey_(){return esAdministradorActual_()?adminDeviceKey_():deviceKey();}
     function accesoActual_() { return leerAccesoLocal_() || {}; }
     function esAdministradorActual_() { return !!accesoActual_().owner; }
     function aplicarVistaAdministrador_() {
@@ -726,6 +739,25 @@
       const json = await respuesta.json();
       if (!json.ok) throw new Error(json.error);
       return json.data;
+    }
+    let adminGoogleInitialized=false;
+    function initAdminGoogle_(){
+      if(!window.google||!google.accounts||!google.accounts.id){setTimeout(initAdminGoogle_,150);return;}
+      if(!adminGoogleInitialized){google.accounts.id.initialize({client_id:ADMIN_GOOGLE_CLIENT_ID,callback:completeAdminGoogle_});adminGoogleInitialized=true;}
+      const target=document.getElementById("adminGoogleButton");
+      if(target&&!target.dataset.rendered){google.accounts.id.renderButton(target,{theme:"outline",size:"large",shape:"rectangular",text:"signin_with",width:320});target.dataset.rendered="1";}
+    }
+    async function completeAdminGoogle_(response){
+      const credential=String(response&&response.credential||"");
+      if(!credential){document.getElementById("estadoAcceso").textContent="Google no devolvió una credencial válida.";return;}
+      document.getElementById("tituloAcceso").textContent="VERIFICANDO CON GOOGLE...";
+      try{
+        const data=await ejecutarApiGAS("autenticarAdmin",{credential:credential,device:adminDeviceKey_()});
+        if(!data||!data.owner||!data.token)throw new Error("No fue posible iniciar la sesión de administrador.");
+        guardarAccesoLocal_(data);
+        document.getElementById("bloqueoAcceso").classList.add("oculto");
+        aplicarVistaAdministrador_();
+      }catch(e){const caja=document.getElementById("estadoAcceso");caja.className="estado error";caja.textContent=e&&e.message?e.message:String(e);document.getElementById("tituloAcceso").textContent="ACCESO AL SIMULADOR";}
     }
 
     function leerAccesoLocal_() {
@@ -809,16 +841,19 @@
     async function autoIngresarAdministrador_() {
       const email=ADMIN_EMAIL;
       try{
-        const estado=await ejecutarApiGAS("prepararIngreso",{email,device:deviceKey()});
+        const estado=await ejecutarApiGAS("prepararIngreso",{email,device:adminDeviceKey_()});
         if(!estado||!estado.owner)throw new Error("No fue posible reconocer la cuenta administradora.");
         if(estado.requirePassword){
           if(adminRecordado_()){
-            mostrarFormularioAcceso_("Ingresa tu contraseña para volver a autorizar este dispositivo.");
+            mostrarFormularioAcceso_("Confirma el acceso con Google para autorizar este dispositivo.");
             mostrarVista("ingresar");
             document.getElementById("correoRecuperar").value=email;
             await actualizarClaveAdministrador();
           }else{
-            mostrarFormularioAcceso_();
+            mostrarFormularioAcceso_("Confirma tu identidad con la cuenta Google autorizada.");
+            mostrarVista("ingresar");
+            document.getElementById("correoRecuperar").value=email;
+            await actualizarClaveAdministrador();
           }
           return;
         }
@@ -827,7 +862,7 @@
         document.getElementById("mensajeAcceso").textContent="Reconociendo este dispositivo de confianza.";
         document.getElementById("formularioAcceso").classList.add("oculto");
         document.getElementById("formularioRecuperar").classList.add("oculto");
-        const respuesta=await ejecutarApiGAS("ingresar",{email,password:"",device:deviceKey()});
+        const respuesta=await ejecutarApiGAS("ingresar",{email,password:"",device:adminDeviceKey_()});
         if(!respuesta||!respuesta.autorizado||!respuesta.owner||!respuesta.token)throw new Error("No fue posible iniciar la sesión de administrador.");
         guardarAccesoLocal_({token:respuesta.token,nombre:respuesta.nombre||"Administrador",email:respuesta.email||email,owner:true});
         document.getElementById("bloqueoAcceso").classList.add("oculto");
@@ -864,7 +899,7 @@
       document.getElementById("formularioRecuperar").classList.add("oculto");
 
       const accion = acceso.owner ? "verificarAdministrador" : "verificarAcceso";
-      ejecutarApiGAS(accion, { token: acceso.token, device: deviceKey() })
+      ejecutarApiGAS(accion, { token: acceso.token, device: sessionDeviceKey_() })
         .then(function(respuesta) {
           if (respuesta && respuesta.owner && String(respuesta.email||"").trim().toLowerCase()===ADMIN_EMAIL) {
             guardarAccesoLocal_({ token: acceso.token, nombre: "Administrador", email: ADMIN_EMAIL, owner: true });
@@ -957,22 +992,17 @@
     }
 
     async function actualizarClaveAdministrador() {
-      const email = document.getElementById("correoRecuperar").value.trim().toLowerCase();
-      const bloque = document.getElementById("bloqueClaveAdmin");
-      const clave = document.getElementById("claveAdministrador");
-      if (!email) {
-        bloque.classList.add("oculto"); clave.required = false; clave.value = ""; return;
-      }
-      try {
-        const estado = await ejecutarApiGAS("prepararIngreso", { email: email, device: deviceKey() });
-        const pedir = !!(estado.owner && estado.requirePassword);
-        bloque.classList.toggle("oculto", !pedir);
-        clave.required = pedir;
-        if (!pedir) clave.value = "";
-      } catch (e) {
-        bloque.classList.remove("oculto");
-        clave.required = true;
-      }
+      const email=document.getElementById("correoRecuperar").value.trim().toLowerCase();
+      const bloque=document.getElementById("bloqueClaveAdmin"),clave=document.getElementById("claveAdministrador");
+      const googleArea=document.getElementById("adminGoogleArea"),submit=document.getElementById("botonRecuperar");
+      bloque.classList.add("oculto");clave.required=false;clave.value="";
+      if(!email){googleArea.classList.add("oculto");submit.classList.remove("oculto");return;}
+      try{
+        const estado=await ejecutarApiGAS("prepararIngreso",{email:email,device:email===ADMIN_EMAIL?adminDeviceKey_():deviceKey()});
+        googleArea.classList.toggle("oculto",!(estado.owner&&estado.requireGoogle));
+        submit.classList.toggle("oculto",!!estado.owner);
+        if(estado.owner){document.getElementById("mensajeAcceso").textContent=estado.requireGoogle?"Confirma tu identidad con la cuenta Google autorizada.":"Reconociendo este dispositivo de confianza.";initAdminGoogle_();}
+      }catch(e){googleArea.classList.toggle("oculto",email!==ADMIN_EMAIL);submit.classList.toggle("oculto",email===ADMIN_EMAIL);if(email===ADMIN_EMAIL)initAdminGoogle_();}
     }
 
     function recuperarAccesoUsuario() {
@@ -1039,7 +1069,7 @@
       const lista = document.getElementById("listaAccesos");
       lista.textContent = "Cargando...";
       try {
-        const usuarios = await ejecutarApiGAS("listarAccesos", { token: acceso.token, device: deviceKey() });
+        const usuarios = await ejecutarApiGAS("listarAccesos", { token: acceso.token, device: adminDeviceKey_() });
         lista.replaceChildren();
         if (!usuarios.length) {
           lista.textContent = "No hay solicitudes registradas.";
@@ -1093,7 +1123,7 @@
       estado.textContent = "Guardando...";
       try {
         const acceso=accesoActual_();
-        await ejecutarApiGAS("crearAcceso",{token:acceso.token,nombre,email,device:deviceKey()});
+        await ejecutarApiGAS("crearAcceso",{token:acceso.token,nombre,email,device:adminDeviceKey_()});
         document.getElementById("formAgregarAcceso").reset();
         estado.textContent = "Acceso autorizado para " + email + ".";
         await cargarGestionAccesos();
@@ -1103,14 +1133,14 @@
     async function cambiarAcceso(email, estado) {
       if (!confirm((estado === "ELIMINAR" ? "Eliminar cuenta" : estado === "AUTORIZADO" ? "Autorizar" : "Rechazar / suspender") + " para " + email + "?")) return;
       const acceso = accesoActual_();
-      await ejecutarApiGAS("actualizarAcceso", { token: acceso.token, email: email, estado: estado, device: deviceKey() });
+      await ejecutarApiGAS("actualizarAcceso", { token: acceso.token, email: email, estado: estado, device: adminDeviceKey_() });
       await cargarGestionAccesos();
     }
 
     async function restablecerAccesosDispositivo(email) {
       if (!confirm("Restablecer los dispositivos vinculados para " + email + "?")) return;
       const acceso = accesoActual_();
-      await ejecutarApiGAS("restablecerDispositivos", { token: acceso.token, email: email, device: deviceKey() });
+      await ejecutarApiGAS("restablecerDispositivos", { token: acceso.token, email: email, device: adminDeviceKey_() });
       await cargarGestionAccesos();
     }
 
@@ -1264,7 +1294,7 @@
           descuentosParticulares: document.getElementById("descuentosParticulares").value,
           tokenAcceso: esAdministradorActual_() ? "" : (leerAccesoLocal_() || {}).token || "",
           adminToken: esAdministradorActual_() ? (leerAccesoLocal_() || {}).token || "" : "",
-          deviceKey: deviceKey()
+          deviceKey: sessionDeviceKey_()
         };
 
         ejecutarApiGAS("calcularRemuneracion", { datos: datos })
