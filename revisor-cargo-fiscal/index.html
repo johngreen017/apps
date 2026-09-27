@@ -263,6 +263,7 @@
     #adminAccessPanel #adminAccessList{margin-top:18px}
     @media(max-width:700px){#adminAccessPanel.admin-access-overlay{align-items:flex-start!important;padding:12px!important}#adminAccessPanel .admin-access-modal{max-height:calc(100dvh - 24px);padding:20px 16px;border-radius:14px}#adminAccessPanel .admin-access-header{align-items:flex-start}#adminAccessPanel .admin-access-header h2{font-size:21px}#adminAccessPanel .admin-access-close{min-width:78px}}
   </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div id="accessOverlay" class="access-overlay" data-access-layout="escalafon-20260924-v2">
@@ -283,12 +284,15 @@
       <form id="accessLoginForm" hidden>
         <label for="accessEmailLogin">Ingresa tu correo autorizado</label>
         <input id="accessEmailLogin" type="email" required autocomplete="email" placeholder="correo@ejemplo.com">
-        <div id="accessAdminPasswordBox" hidden>
+        <div id="accessAdminPasswordBox" hidden aria-hidden="true">
           <label for="accessAdminPassword">Contraseña de administrador</label>
-          <input id="accessAdminPassword" type="password" autocomplete="current-password">
-          <small>Se solicita solo al registrar este dispositivo por primera vez.</small>
+          <input id="accessAdminPassword" type="password" autocomplete="current-password" disabled>
+          <small>El administrador ingresa con Google.</small>
         </div>
-        <button type="submit">INGRESAR AL REVISOR</button>
+        <div id="adminGoogleArea" hidden>
+          <div id="adminGoogleButton"></div>
+        </div>
+        <button id="accessLoginSubmit" type="submit">INGRESAR AL REVISOR</button>
       </form>
       <div id="accessStatus" class="access-status"></div>
     </div>
@@ -413,6 +417,7 @@
     const AUTH_STORAGE = 'revisorCargoFiscal.acceso.v1';
     const ADMIN_EMAIL = 'john.green017@gmail.com';
     const AUTH_ADMIN_REMEMBER = 'revisorCargoFiscal.admin.recordado.v1';
+    const ADMIN_GOOGLE_CLIENT_ID = '892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com';
     let SESION_ADMIN = null;
 
     function authDeviceKey() {
@@ -424,9 +429,43 @@
         return (mobile?'mobile':'desktop')+':'+key;
       }catch(e){throw new Error('Habilita el almacenamiento del navegador y evita el modo privado para vincular este dispositivo.');}
     }
+    function authAdminDeviceKey(){
+      try{
+        const type=authDeviceKey().split(':')[0],keyName='revisorCargoFiscal.admin.device.v1';
+        let key=localStorage.getItem(keyName);
+        if(!key){const bytes=crypto.getRandomValues(new Uint8Array(32));key=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem(keyName,key);}
+        if(!/^[a-f0-9]{64}$/.test(key))throw new Error('invalid');
+        return type+':'+key;
+      }catch(e){throw new Error('Habilita el almacenamiento del navegador para reconocer este dispositivo.');}
+    }
+    function authSessionDevice(){const a=authRead();return a&&a.owner?authAdminDeviceKey():authDeviceKey();}
     async function authApi(accion,payload={}) {
       const response=await fetch(AUTH_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({accion,...payload})});
       const json=await response.json();if(!json.ok)throw new Error(json.error||'No fue posible completar la solicitud.');return json.data;
+    }
+    let adminGoogleInitialized=false;
+    function initAdminGoogle_(){
+      if(!window.google||!google.accounts||!google.accounts.id){setTimeout(initAdminGoogle_,150);return;}
+      if(!adminGoogleInitialized){
+        google.accounts.id.initialize({client_id:ADMIN_GOOGLE_CLIENT_ID,callback:completeAdminGoogle_});
+        adminGoogleInitialized=true;
+      }
+      const target=document.getElementById('adminGoogleButton');
+      if(target&&!target.dataset.rendered){
+        google.accounts.id.renderButton(target,{theme:'outline',size:'large',shape:'rectangular',text:'signin_with',width:320});
+        target.dataset.rendered='1';
+      }
+    }
+    async function completeAdminGoogle_(response){
+      const credential=String(response&&response.credential||'');
+      if(!credential){authStatus('Google no devolvió una credencial válida.',true);return;}
+      const title=document.getElementById('accessTitle');title.textContent='VERIFICANDO CON GOOGLE...';
+      try{
+        const data=await authApi('autenticarAdmin',{credential,device:authAdminDeviceKey()});
+        if(!data||!data.owner||!data.token)throw new Error('No fue posible iniciar la sesión de administrador.');
+        authSave(data);document.getElementById('accessOverlay').hidden=true;title.textContent='ACCESO AL REVISOR';applyAuthRole();
+      }catch(e){authStatus(e.message||String(e),true);}
+      finally{if(document.getElementById('accessOverlay').hidden)title.textContent='ACCESO AL REVISOR';}
     }
     function authRead(){
       if(SESION_ADMIN)return SESION_ADMIN;
@@ -470,10 +509,17 @@
       authStatus('');
     }
     async function refreshAdminPassword(){
-      const email=document.getElementById('accessEmailLogin').value.trim().toLowerCase(),box=document.getElementById('accessAdminPasswordBox'),input=document.getElementById('accessAdminPassword');
-      if(!email){box.hidden=true;input.required=false;input.value='';return;}
-      try{const s=await authApi('prepararIngreso',{email,device:authDeviceKey()});const pedir=!!(s.owner&&s.requirePassword);box.hidden=!pedir;input.required=pedir;if(!pedir)input.value='';}
-      catch(e){box.hidden=false;input.required=true;}
+      const email=document.getElementById('accessEmailLogin').value.trim().toLowerCase();
+      const box=document.getElementById('accessAdminPasswordBox'),input=document.getElementById('accessAdminPassword');
+      const googleArea=document.getElementById('adminGoogleArea'),submit=document.getElementById('accessLoginSubmit');
+      box.hidden=true;input.required=false;input.value='';
+      if(!email){googleArea.hidden=true;submit.hidden=false;return;}
+      try{
+        const admin=email===ADMIN_EMAIL;
+        const state=await authApi('prepararIngreso',{email,device:admin?authAdminDeviceKey():authDeviceKey()});
+        googleArea.hidden=!(state.owner&&state.requireGoogle);submit.hidden=!!state.owner;
+        if(state.owner){document.getElementById('accessHint').textContent=state.requireGoogle?'Confirma tu identidad con la cuenta Google autorizada.':'Reconociendo este dispositivo de confianza.';initAdminGoogle_();}
+      }catch(e){googleArea.hidden=email!==ADMIN_EMAIL;submit.hidden=email===ADMIN_EMAIL;if(email===ADMIN_EMAIL)initAdminGoogle_();}
     }
     function applyAuthRole(){
       const a=authRead(),owner=!!(a&&a.owner);
@@ -483,7 +529,7 @@
     async function autoLoginAdmin_(){
       const email=ADMIN_EMAIL;
       try{
-        const state=await authApi('prepararIngreso',{email,device:authDeviceKey()});
+        const state=await authApi('prepararIngreso',{email,device:authAdminDeviceKey()});
         if(!state||!state.owner)throw new Error('No fue posible reconocer la cuenta administradora.');
         if(state.requirePassword){
           if(adminRemembered_()){
@@ -491,7 +537,7 @@
             setAccessView(true);
             document.getElementById('accessEmailLogin').value=email;
             document.getElementById('accessTitle').textContent='ACCESO AL REVISOR';
-            document.getElementById('accessHint').textContent='Ingresa tu contraseña para volver a autorizar este dispositivo.';
+            document.getElementById('accessHint').textContent='Confirma el acceso con Google para autorizar este dispositivo.';
             await refreshAdminPassword();
           }else{
             document.getElementById('accessOverlay').hidden=false;
@@ -505,7 +551,7 @@
         document.getElementById('accessEmailLogin').value=email;
         document.getElementById('accessTitle').textContent='VERIFICANDO ACCESO...';
         document.getElementById('accessHint').textContent='Reconociendo este dispositivo de confianza.';
-        const r=await authApi('ingresar',{email,password:'',device:authDeviceKey()});
+        const r=await authApi('ingresar',{email,password:'',device:authAdminDeviceKey()});
         if(!r||!r.autorizado||!r.owner||!r.token)throw new Error('No fue posible iniciar la sesión de administrador.');
         authSave({token:r.token,email:r.email||email,nombre:r.nombre||'Administrador',owner:true});
         document.getElementById('accessAdminPassword').value='';
@@ -538,7 +584,7 @@
         return;
       }
       try{
-        const r=await authApi(a.owner?'verificarAdministrador':'verificarAcceso',{token:a.token,device:authDeviceKey()});
+        const r=await authApi(a.owner?'verificarAdministrador':'verificarAcceso',{token:a.token,device:authSessionDevice()});
         if(!r||!r.autorizado)throw new Error(r&&r.mensaje?r.mensaje:'Acceso no autorizado.');
         document.getElementById('accessOverlay').hidden=true;applyAuthRole();
       }catch(e){
@@ -549,7 +595,7 @@
     async function loadAccessAdmin(){
       const a=authRead(),list=document.getElementById('adminAccessList');list.textContent='Cargando...';
       try{
-        const users=await authApi('listarAccesos',{token:a.token,device:authDeviceKey()});list.replaceChildren();
+        const users=await authApi('listarAccesos',{token:a.token,device:authAdminDeviceKey()});list.replaceChildren();
         if(!users.length){list.textContent='No hay solicitudes registradas.';return;}
         users.forEach(u=>{
           const row=document.createElement('div');row.className='admin-user';
@@ -565,11 +611,11 @@
     }
     async function changeAccessUser(email,status){
       if(!confirm((status==='ELIMINAR'?'Eliminar cuenta':status==='AUTORIZADO'?'Autorizar':'Rechazar / suspender')+' para '+email+'?'))return;
-      const a=authRead();await authApi('actualizarAcceso',{token:a.token,email,status,device:authDeviceKey()});await loadAccessAdmin();
+      const a=authRead();await authApi('actualizarAcceso',{token:a.token,email,status,device:authAdminDeviceKey()});await loadAccessAdmin();
     }
     async function resetAccessDevices(email){
       if(!confirm('Restablecer los dispositivos vinculados para '+email+'?'))return;
-      const a=authRead();await authApi('restablecerDispositivos',{token:a.token,email,device:authDeviceKey()});await loadAccessAdmin();
+      const a=authRead();await authApi('restablecerDispositivos',{token:a.token,email,device:authAdminDeviceKey()});await loadAccessAdmin();
     }
     function initAccessSecurity(){
       document.getElementById('accessTabApply').addEventListener('click',()=>setAccessView(false));
@@ -583,7 +629,7 @@
       document.getElementById('accessLoginForm').addEventListener('submit',async e=>{
         e.preventDefault();const email=document.getElementById('accessEmailLogin').value.trim().toLowerCase();
         try{
-          const r=await authApi('ingresar',{email,password:document.getElementById('accessAdminPassword').value,device:authDeviceKey()});
+          const r=await authApi('ingresar',{email,password:document.getElementById('accessAdminPassword').value,device:email===ADMIN_EMAIL?authAdminDeviceKey():authDeviceKey()});
           authSave({token:r.token,email:r.email,nombre:r.nombre||'',owner:!!r.owner});document.getElementById('accessAdminPassword').value='';document.getElementById('accessOverlay').hidden=true;applyAuthRole();
         }catch(err){authStatus(err.message||String(err),true);await refreshAdminPassword();}
       });
@@ -601,7 +647,7 @@
         estado.textContent='Guardando...';
         try {
           const a=authRead();
-          await authApi('crearAcceso',{token:a.token,nombre,email,device:authDeviceKey()});
+          await authApi('crearAcceso',{token:a.token,nombre,email,device:authAdminDeviceKey()});
           document.getElementById('adminAddUserForm').reset();
           estado.textContent='Acceso autorizado para '+email+'.';
           await loadAccessAdmin();
