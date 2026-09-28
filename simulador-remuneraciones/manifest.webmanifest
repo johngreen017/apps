@@ -1,0 +1,24 @@
+{
+  "name": "Simulador de Remuneraciones",
+  "short_name": "Simulador",
+  "id": "/apps/simulador-remuneraciones/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#173d2b",
+  "theme_color": "#173d2b",
+  "icons": [
+    {
+      "src": "icono-simulador-v6.png?v=6",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icono-simulador-v6.png?v=6",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

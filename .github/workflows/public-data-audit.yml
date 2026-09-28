@@ -1,0 +1,56 @@
+name: Auditoría de datos del repositorio público
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revisar-publicacion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprobar que no se publican archivos privados ni secretos evidentes
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const paths = cp.execFileSync('git', ['ls-files', '-z']).toString('utf8').split('\0').filter(Boolean);
+          const prohibitedPath = /(?:^|\/)(?:\.clasp\.json|\.env(?:\.[^\/]*)?|\.clasprc\.json|credentials?\.json|service-account[^\/]*\.json|id_rsa|id_ed25519)$/i;
+          const prohibitedExt = /\.(?:gs|pem|p12|pfx|key|xlsx?|csv|pdf|sqlite|db|bak)$/i;
+          const privateBackend = /(?:^|\/)(?:apps-script|private|backups?)(?:\/|$)/i;
+          const textExt = /\.(?:html?|js|mjs|cjs|py|md|ya?ml|json|webmanifest|txt|css)$/i;
+          const secretPatterns = [
+            { name: 'Clave privada PEM', re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
+            { name: 'Token GitHub', re: /\b(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{20,})\b/ },
+            { name: 'Clave Google API', re: /\bAIza[0-9A-Za-z_-]{30,}\b/ },
+            { name: 'Clave de servicio AWS', re: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/ }
+          ];
+          const errors = [];
+          for (const path of paths) {
+            if (prohibitedPath.test(path) || prohibitedExt.test(path) || privateBackend.test(path)) {
+              errors.push(path + ': posible archivo o carpeta privada');
+              continue;
+            }
+            if (!textExt.test(path)) continue;
+            const source = fs.readFileSync(path, 'utf8');
+            for (const pattern of secretPatterns) {
+              if (pattern.re.test(source)) errors.push(path + ': ' + pattern.name);
+            }
+          }
+          if (errors.length) {
+            console.error('Se detectó contenido que no debe publicarse (no se imprimen valores):');
+            for (const issue of errors) console.error('- ' + issue);
+            process.exitCode = 1;
+          } else {
+            console.log('Revisión estática superada: no se encontraron archivos privados ni patrones evidentes de credenciales.');
+          }
+          NODE
