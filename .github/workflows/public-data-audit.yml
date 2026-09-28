@@ -32,8 +32,16 @@ jobs:
             { name: 'Clave privada PEM', re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
             { name: 'Token GitHub', re: /\b(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{20,})\b/ },
             { name: 'Clave Google API', re: /\bAIza[0-9A-Za-z_-]{30,}\b/ },
-            { name: 'Clave de servicio AWS', re: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/ }
+            { name: 'Clave de servicio AWS', re: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/ },
+            { name: 'Correo electrónico incrustado', re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i },
+            { name: 'Client ID OAuth de Google', re: /\b\d{6,}-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com\b/ }
           ];
+          const launcherLimits = new Map([
+            ['escalafon-online/index.html', 20000],
+            ['revisor-cargo-fiscal/index.html', 20000],
+            ['simulador-remuneraciones/index.html', 20000],
+            ['gastos/index.html', 10000]
+          ]);
           const errors = [];
           for (const path of paths) {
             if (prohibitedPath.test(path) || prohibitedExt.test(path) || privateBackend.test(path)) {
@@ -42,6 +50,10 @@ jobs:
             }
             if (!textExt.test(path)) continue;
             const source = fs.readFileSync(path, 'utf8');
+            const maxLauncherBytes = launcherLimits.get(path);
+            if (maxLauncherBytes && Buffer.byteLength(source, 'utf8') > maxLauncherBytes) {
+              errors.push(path + ': el lanzador público excede el tamaño máximo permitido');
+            }
             for (const pattern of secretPatterns) {
               if (pattern.re.test(source)) errors.push(path + ': ' + pattern.name);
             }
