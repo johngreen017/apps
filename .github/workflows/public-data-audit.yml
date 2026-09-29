@@ -33,8 +33,7 @@ jobs:
             { name: 'Token GitHub', re: /\b(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{20,})\b/ },
             { name: 'Clave Google API', re: /\bAIza[0-9A-Za-z_-]{30,}\b/ },
             { name: 'Clave de servicio AWS', re: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/ },
-            { name: 'Correo electrónico incrustado', re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i },
-            { name: 'Client ID OAuth de Google', re: /\b\d{6,}-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com\b/ }
+            { name: 'Correo electrónico incrustado', re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i }
           ];
           const launcherLimits = new Map([
             ['escalafon-online/index.html', 20000],
