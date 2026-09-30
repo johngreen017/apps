@@ -11,14 +11,6 @@
   <link rel="apple-touch-icon" href="icono-simulador-v6.png?v=6">
   <link rel="manifest" href="manifest.webmanifest?v=6">
   <title>Simulador de Remuneraciones</title>
-  <script>
-    (function(){
-      const ua=navigator.userAgent||'';
-      const ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-      const mobile=ipad||/Mobi|Android|iPhone|iPod/i.test(ua);
-      if(!mobile)window.location.replace('https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec');
-    })();
-  </script>
   <style>
     *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#eaf0ec}
     #shell{position:fixed;inset:0;background:#eaf0ec}
@@ -35,9 +27,7 @@
 <body>
   <main id="shell">
     <div id="loading">Abriendo Simulador de Remuneraciones…</div>
-    <iframe id="app" title="Simulador de Remuneraciones"
-      src="https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec"
-      allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <iframe id="app" title="Simulador de Remuneraciones"\n      src="https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec"\n      credentialless\n      allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
   </main>
   <section id="googleLayer" hidden>
     <div id="googleButton"></div>
