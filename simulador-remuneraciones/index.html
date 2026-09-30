@@ -41,7 +41,7 @@ const app=document.getElementById('app');
 const shell=document.getElementById('shell');
 const googleLayer=document.getElementById('googleLayer');
 const googleStatus=document.getElementById('googleStatus');
-let appSource=null,googleClientId='892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com',googleReady=false;
+let appSource=null,googleClientId='892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com',oneSignalAppId='0956c8db-37fb-4a11-98bd-397d121ae8fa',googleReady=false,owner=false,oneSignal=null,oneSignalLoading=false;
 
 function trustedAppMessage(event){
   try{
@@ -65,7 +65,7 @@ function collectMigrationStorage(){
   const values={};
   try{
     ensureStableDevice_();
-    const allowed=['apps.admin.device.v1','simulador.admin.device.v1','simuladorRemuneracionesAcceso','simulador.admin.recordado.v1'];
+    const allowed=['apps.admin.device.v1','simulador.admin.device.v1','simuladorRemuneracionesAcceso','simulador.admin.recordado.v1','simulador.admin.sesion-cerrada.v1'];
     allowed.forEach(key=>{
       const value=localStorage.getItem(key);
       if(typeof value==='string')values[key]=value;
@@ -91,14 +91,67 @@ function initGoogle(){
   google.accounts.id.renderButton(document.getElementById('googleButton'),{type:'standard',theme:'outline',size:'large',text:'signin_with',shape:'rectangular',width:320,locale:'es'});
   googleReady=true;
 }
-window.addEventListener('message',event=>{
+function ensureOneSignal(){
+  if(!owner||!oneSignalAppId||oneSignal||oneSignalLoading)return;
+  oneSignalLoading=true;
+  window.OneSignalDeferred=window.OneSignalDeferred||[];
+  OneSignalDeferred.push(async sdk=>{
+    oneSignal=sdk;oneSignalLoading=false;
+    await sdk.init({appId:oneSignalAppId,serviceWorkerParam:{scope:'/apps/simulador-remuneraciones/'},serviceWorkerPath:'/apps/simulador-remuneraciones/OneSignalSDKWorker.js'});
+    await sharePush();
+  });
+  const script=document.createElement('script');
+  script.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+  script.defer=true;
+  script.onerror=()=>{oneSignalLoading=false;};
+  document.head.appendChild(script);
+}
+async function sharePush(){
+  if(!owner||!oneSignal)return;
+  const enabled=!!oneSignal.User.PushSubscription.optedIn;
+  const id=enabled?oneSignal.User.PushSubscription.id:'';
+  if(id)send({type:'apps-simulador-push-subscription',app:'simulador',subscriptionId:id});
+  send({type:'apps-simulador-push-status',app:'simulador',enabled:!!id});
+}
+async function enablePush(){
+  owner=true;ensureOneSignal();
+  if(!oneSignal){
+    send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'Las notificaciones todavía se están preparando. Inténtalo nuevamente.'});
+    return;
+  }
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.navigator.standalone){
+    send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'Abre el Simulador desde su icono en la pantalla de inicio para activar notificaciones.'});
+    return;
+  }
+  try{
+    await oneSignal.Notifications.requestPermission();
+    await oneSignal.User.PushSubscription.optIn();
+    await sharePush();
+    if(!oneSignal.User.PushSubscription.optedIn)send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'El permiso de notificaciones no fue concedido.'});
+  }catch(_){
+    send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'No fue posible activar las notificaciones.'});
+  }
+}
+window.addEventListener('message',async event=>{
   if(!trustedAppMessage(event)||!event.source||!event.data)return;
   appSource=event.source;
   const d=event.data;
   if(d.type==='apps-simulador-bridge-ready'&&d.app==='simulador'){
     if(typeof d.googleClientId==='string'&&/\.apps\.googleusercontent\.com$/.test(d.googleClientId))googleClientId=d.googleClientId;
+    if(typeof d.oneSignalAppId==='string'&&/^[a-f0-9-]{36}$/i.test(d.oneSignalAppId))oneSignalAppId=d.oneSignalAppId;
     send({type:'apps-simulador-storage-sync',app:'simulador',values:collectMigrationStorage()});
-    initGoogle();
+    initGoogle();ensureOneSignal();
+  }else if(d.type==='apps-simulador-storage-set'&&d.app==='simulador'){
+    const allowed=['simulador.admin.recordado.v1','simulador.admin.sesion-cerrada.v1'];
+    let ok=false;
+    try{
+      if(allowed.includes(d.key)){
+        if(d.value===null||d.value===undefined)localStorage.removeItem(d.key);
+        else localStorage.setItem(d.key,String(d.value));
+        ok=true;
+      }
+    }catch(_){}
+    send({type:'apps-simulador-storage-set-result',app:'simulador',key:d.key,ok});
   }else if(d.type==='apps-admin-google-required'&&d.app==='simulador'){
     googleLayer.hidden=false; shell.classList.add('ready'); initGoogle();
   }else if(d.type==='apps-admin-google-result'&&d.app==='simulador'){
@@ -106,6 +159,10 @@ window.addEventListener('message',event=>{
     else{googleLayer.hidden=false;googleStatus.textContent='No se pudo ingresar con Google.';}
   }else if(d.type==='apps-simulador-storage-synced'&&d.app==='simulador'){
     if(d.ok===true)clearMigratedSensitiveStorage();
+  }else if(d.type==='apps-simulador-owner-session'&&d.app==='simulador'){
+    owner=d.owner===true;ensureOneSignal();if(owner)await sharePush();
+  }else if(d.type==='apps-simulador-enable-push'&&d.app==='simulador'){
+    await enablePush();
   }
 });
 app.addEventListener('load',()=>{
