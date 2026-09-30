@@ -50,9 +50,21 @@ function trustedAppMessage(event){
   }catch(_){return false;}
 }
 function send(payload){const target=appSource||app.contentWindow;if(target)target.postMessage(payload,'*');}
+function ensureStableDevice_(){
+  try{
+    const storage='apps.admin.device.v1';
+    let key=localStorage.getItem(storage);
+    if(!/^[a-f0-9]{64}$/.test(String(key||''))){
+      const bytes=crypto.getRandomValues(new Uint8Array(32));
+      key=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+      localStorage.setItem(storage,key);
+    }
+  }catch(_){}
+}
 function collectMigrationStorage(){
   const values={};
   try{
+    ensureStableDevice_();
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);
       if(!key)continue;
