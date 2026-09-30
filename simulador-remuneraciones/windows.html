@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173d2b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Simulador">
+  <link rel="icon" type="image/png" href="icono-simulador-v6.png?v=6">
+  <link rel="apple-touch-icon" href="icono-simulador-v6.png?v=6">
+  <link rel="manifest" href="manifest.webmanifest?v=6">
+  <title>Simulador de Remuneraciones · Windows</title>
+  <style>
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#eaf0ec}
+    #shell{position:fixed;inset:0;background:#eaf0ec}
+    iframe{position:absolute;inset:0;width:100%;height:calc(100% + 52px);border:0;background:#eaf0ec}
+    #loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;z-index:2;color:#173d2b;font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eaf0ec}
+    .ready #loading{display:none}
+    #googleLayer{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;width:min(92vw,360px);padding:12px;background:#fffffff2;border:1px solid #d5e4dc;border-radius:15px;box-shadow:0 10px 30px #0d30242e;text-align:center}
+    #googleLayer[hidden]{display:none}
+    #googleButton{min-height:44px;display:flex;justify-content:center}
+    #googleStatus{margin:7px 0 0;color:#51675f;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <main id="shell">
+    <div id="loading">Abriendo Simulador de Remuneraciones…</div>
+    <iframe id="app" title="Simulador de Remuneraciones"
+      src="https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec"
+      credentialless
+      sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
+      allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </main>
+  <section id="googleLayer" hidden>
+    <div id="googleButton"></div>
+    <p id="googleStatus">Acceso seguro con Google.</p>
+  </section>
+  <noscript>Activa JavaScript para abrir el Simulador de Remuneraciones.</noscript>
+<script>
+const app=document.getElementById('app');
+const shell=document.getElementById('shell');
+const googleLayer=document.getElementById('googleLayer');
+const googleStatus=document.getElementById('googleStatus');
+let appSource=null,googleClientId='892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com',oneSignalAppId='0956c8db-37fb-4a11-98bd-397d121ae8fa',googleReady=false,owner=false,oneSignal=null,oneSignalLoading=false;
+
+function trustedAppMessage(event){
+  try{
+    const host=new URL(event.origin).hostname;
+    return event.origin==='null'||event.origin==='https://script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com');
+  }catch(_){return false;}
+}
+function send(payload){const target=appSource||app.contentWindow;if(target)target.postMessage(payload,'*');}
+function ensureStableDevice_(){
+  try{
+    const storage='apps.admin.device.v1';
+    let key=localStorage.getItem(storage);
+    if(!/^[a-f0-9]{64}$/.test(String(key||''))){
+      const bytes=crypto.getRandomValues(new Uint8Array(32));
+      key=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+      localStorage.setItem(storage,key);
+    }
+  }catch(_){}
+}
+function collectMigrationStorage(){
+  const values={};
+  try{
+    ensureStableDevice_();
+    const allowed=['apps.admin.device.v1','simulador.admin.device.v1','simuladorRemuneracionesAcceso','simulador.admin.recordado.v1','simulador.admin.sesion-cerrada.v1'];
+    allowed.forEach(key=>{
+      const value=localStorage.getItem(key);
+      if(typeof value==='string')values[key]=value;
+    });
+  }catch(_){}
+  return values;
+}
+function clearMigratedSensitiveStorage(){
+  try{localStorage.removeItem('simuladorRemuneracionesAcceso');}catch(_){}
+}
+function initGoogle(){
+  if(googleReady||!googleClientId||!window.google?.accounts?.id)return;
+  google.accounts.id.initialize({
+    client_id:googleClientId,
+    callback:r=>{
+      const credential=r&&r.credential;
+      if(!credential){googleStatus.textContent='Google no entregó una credencial válida.';return;}
+      googleStatus.textContent='Validando la cuenta…';
+      send({type:'apps-admin-google-credential',app:'simulador',credential});
+    },
+    auto_select:false,cancel_on_tap_outside:false
+  });
+  google.accounts.id.renderButton(document.getElementById('googleButton'),{type:'standard',theme:'outline',size:'large',text:'signin_with',shape:'rectangular',width:320,locale:'es'});
+  googleReady=true;
+}
+function ensureOneSignal(){
+  if(!owner||!oneSignalAppId||oneSignal||oneSignalLoading)return;
+  oneSignalLoading=true;
+  window.OneSignalDeferred=window.OneSignalDeferred||[];
+  OneSignalDeferred.push(async sdk=>{
+    oneSignal=sdk;oneSignalLoading=false;
+    await sdk.init({appId:oneSignalAppId,serviceWorkerParam:{scope:'/apps/simulador-remuneraciones/'},serviceWorkerPath:'/apps/simulador-remuneraciones/OneSignalSDKWorker.js'});
+    await sharePush();
+  });
+  const script=document.createElement('script');
+  script.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+  script.defer=true;
+  script.onerror=()=>{oneSignalLoading=false;};
+  document.head.appendChild(script);
+}
+async function sharePush(){
+  if(!owner||!oneSignal)return;
+  const enabled=!!oneSignal.User.PushSubscription.optedIn;
+  const id=enabled?oneSignal.User.PushSubscription.id:'';
+  if(id)send({type:'apps-simulador-push-subscription',app:'simulador',subscriptionId:id});
+  send({type:'apps-simulador-push-status',app:'simulador',enabled:!!id});
+}
+async function enablePush(){
+  owner=true;ensureOneSignal();
+  if(!oneSignal){
+    send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'Las notificaciones todavía se están preparando. Inténtalo nuevamente.'});
+    return;
+  }
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.navigator.standalone){
+    send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'Abre el Simulador desde su icono en la pantalla de inicio para activar notificaciones.'});
+    return;
+  }
+  try{
+    await oneSignal.Notifications.requestPermission();
+    await oneSignal.User.PushSubscription.optIn();
+    await sharePush();
+    if(!oneSignal.User.PushSubscription.optedIn)send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'El permiso de notificaciones no fue concedido.'});
+  }catch(_){
+    send({type:'apps-simulador-push-status',app:'simulador',enabled:false,error:'No fue posible activar las notificaciones.'});
+  }
+}
+window.addEventListener('message',async event=>{
+  if(!trustedAppMessage(event)||!event.source||!event.data)return;
+  appSource=event.source;
+  const d=event.data;
+  if(d.type==='apps-simulador-bridge-ready'&&d.app==='simulador'){
+    if(typeof d.googleClientId==='string'&&/\.apps\.googleusercontent\.com$/.test(d.googleClientId))googleClientId=d.googleClientId;
+    if(typeof d.oneSignalAppId==='string'&&/^[a-f0-9-]{36}$/i.test(d.oneSignalAppId))oneSignalAppId=d.oneSignalAppId;
+    send({type:'apps-simulador-storage-sync',app:'simulador',values:collectMigrationStorage()});
+    initGoogle();ensureOneSignal();
+  }else if(d.type==='apps-simulador-storage-set'&&d.app==='simulador'){
+    const allowed=['simulador.admin.recordado.v1','simulador.admin.sesion-cerrada.v1'];
+    let ok=false;
+    try{
+      if(allowed.includes(d.key)){
+        if(d.value===null||d.value===undefined)localStorage.removeItem(d.key);
+        else localStorage.setItem(d.key,String(d.value));
+        ok=true;
+      }
+    }catch(_){}
+    send({type:'apps-simulador-storage-set-result',app:'simulador',key:d.key,ok});
+  }else if(d.type==='apps-admin-google-required'&&d.app==='simulador'){
+    googleLayer.hidden=false; shell.classList.add('ready'); initGoogle();
+  }else if(d.type==='apps-admin-google-result'&&d.app==='simulador'){
+    if(d.ok===true){googleLayer.hidden=true;googleStatus.textContent='Acceso seguro con Google.';}
+    else{googleLayer.hidden=false;googleStatus.textContent='No se pudo ingresar con Google.';}
+  }else if(d.type==='apps-simulador-storage-synced'&&d.app==='simulador'){
+    if(d.ok===true)clearMigratedSensitiveStorage();
+  }else if(d.type==='apps-simulador-owner-session'&&d.app==='simulador'){
+    owner=d.owner===true;ensureOneSignal();if(owner)await sharePush();
+  }else if(d.type==='apps-simulador-enable-push'&&d.app==='simulador'){
+    await enablePush();
+  }
+});
+app.addEventListener('load',()=>{
+  shell.classList.add('ready');
+  send({type:'apps-simulador-bridge-request',app:'simulador'});
+});
+window.addEventListener('load',initGoogle,{once:true});
+</script>
+</body>
+</html>
