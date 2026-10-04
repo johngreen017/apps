@@ -51,19 +51,28 @@ const googleLayer=document.getElementById("googleLayer");
 const googleStatus=document.getElementById("googleStatus");
 const DEVICE_STORAGE="apps.misgastos.device.v2";
 let appSource=null;
+let appOrigin="";
 let googleClientId="";
 let googleReady=false;
 
 function trustedAppMessage(event){
+  if(event.source!==app.contentWindow)return false;
   try{
-    const host=new URL(event.origin).hostname;
-    return event.origin==="null"||event.origin==="https://script.google.com"||
-      host==="googleusercontent.com"||host.endsWith(".googleusercontent.com");
+    const url=new URL(event.origin),host=url.hostname;
+    return url.protocol==="https:"&&(host==="script.google.com"||host==="googleusercontent.com"||host.endsWith(".googleusercontent.com"));
   }catch(_){return false;}
 }
-function send(payload){
+function bindAppMessage(event){
+  if(!trustedAppMessage(event))return false;
+  appSource=event.source;
+  appOrigin=event.origin;
+  return true;
+}
+function send(payload,bootstrap=false){
   const target=appSource||app.contentWindow;
-  if(target)target.postMessage(payload,"*");
+  if(!target)return;
+  if(appOrigin)target.postMessage(payload,appOrigin);
+  else if(bootstrap)target.postMessage(payload,"*");
 }
 function stableDevice(){
   try{
@@ -83,7 +92,7 @@ function shareDevice(){
   const device=stableDevice();
   if(device)send({type:"mg-device-key",device});
 }
-function requestConfig(){send({type:"mg-request-bridge-config"});}
+function requestConfig(){send({type:"mg-request-bridge-config"},true);}
 function initGoogle(){
   if(googleReady||!googleClientId||!window.google?.accounts?.id)return;
   google.accounts.id.initialize({
@@ -107,13 +116,13 @@ function forgetDevice(){
   try{localStorage.removeItem(DEVICE_STORAGE);}catch(_){}
 }
 window.addEventListener("message",event=>{
-  if(!trustedAppMessage(event)||!event.source||!event.data)return;
-  appSource=event.source;
+  if(!event.data||!bindAppMessage(event))return;
   const data=event.data;
   if(data.type==="mg-bridge-config"){
     if(typeof data.googleClientId==="string"&&/\.apps\.googleusercontent\.com$/.test(data.googleClientId)){
       googleClientId=data.googleClientId;
       initGoogle();
+      shareDevice();
     }
   }else if(data.type==="mg-request-device-key"){
     shareDevice();
@@ -144,7 +153,7 @@ app.addEventListener("load",()=>{
   // Compatibilidad: el backend anterior sigue abriendo mientras se despliega la
   // nueva autenticación. El nuevo backend oculta su propia pantalla al autenticar.
   shell.classList.add("ready");
-  [0,100,350].forEach(ms=>setTimeout(()=>{shareDevice();requestConfig();},ms));
+  [0,100,350].forEach(ms=>setTimeout(()=>{requestConfig();},ms));
 });
 window.addEventListener("load",()=>{initGoogle();requestConfig();},{once:true});
 </script>
