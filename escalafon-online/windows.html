@@ -47,15 +47,27 @@ const app=document.getElementById('app');
 const shell=document.getElementById('shell');
 const googleLayer=document.getElementById('googleLayer');
 const googleStatus=document.getElementById('googleStatus');
-let appSource=null,googleClientId='',oneSignalAppId='',googleReady=false,owner=false,oneSignal=null,oneSignalLoading=false;
+let appSource=null,appOrigin='',googleClientId='',oneSignalAppId='',googleReady=false,owner=false,oneSignal=null,oneSignalLoading=false;
 
 function trustedAppMessage(event){
+  if(event.source!==app.contentWindow)return false;
   try{
-    const host=new URL(event.origin).hostname;
-    return event.origin==='null'||event.origin==='https://script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com');
+    const url=new URL(event.origin),host=url.hostname;
+    return url.protocol==='https:'&&(host==='script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com'));
   }catch(_){return false;}
 }
-function send(payload){const target=appSource||app.contentWindow;if(target)target.postMessage(payload,'*');}
+function bindAppMessage(event){
+  if(!trustedAppMessage(event))return false;
+  appSource=event.source;
+  appOrigin=event.origin;
+  return true;
+}
+function send(payload,bootstrap=false){
+  const target=appSource||app.contentWindow;
+  if(!target)return;
+  if(appOrigin)target.postMessage(payload,appOrigin);
+  else if(bootstrap)target.postMessage(payload,'*');
+}
 function stableDevice(){
   try{
     const storage='apps.admin.device.v1';
@@ -67,7 +79,7 @@ function stableDevice(){
   }catch(_){return '';}
 }
 function shareDevice(){const device=stableDevice();if(device)send({type:'escalafon-device-key',device});}
-function requestConfig(){send({type:'escalafon-request-bridge-config'});}
+function requestConfig(){send({type:'escalafon-request-bridge-config'},true);}
 
 function initGoogle(){
   if(googleReady||!googleClientId||!window.google?.accounts?.id)return;
@@ -114,13 +126,12 @@ async function enablePush(){
 }
 
 window.addEventListener('message',async event=>{
-  if(!trustedAppMessage(event)||!event.source||!event.data)return;
-  appSource=event.source;
+  if(!event.data||!bindAppMessage(event))return;
   const d=event.data;
   if(d.type==='escalafon-bridge-config'){
     if(typeof d.googleClientId==='string'&&/\.apps\.googleusercontent\.com$/.test(d.googleClientId))googleClientId=d.googleClientId;
     if(typeof d.oneSignalAppId==='string'&&/^[a-f0-9-]{36}$/i.test(d.oneSignalAppId))oneSignalAppId=d.oneSignalAppId;
-    initGoogle();ensureOneSignal();
+    initGoogle();ensureOneSignal();shareDevice();
   }else if(d.type==='escalafon-request-device-key'){
     shareDevice();
   }else if(d.type==='escalafon-google-login'){
@@ -137,7 +148,7 @@ window.addEventListener('message',async event=>{
     await enablePush();
   }
 });
-app.addEventListener('load',()=>{[0,100,350].forEach(ms=>setTimeout(()=>{shareDevice();requestConfig();},ms));});
+app.addEventListener('load',()=>{[0,100,350].forEach(ms=>setTimeout(()=>{requestConfig();},ms));});
 window.addEventListener('load',()=>{initGoogle();requestConfig();},{once:true});
 </script>
 </body>
