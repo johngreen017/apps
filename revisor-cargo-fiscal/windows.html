@@ -46,15 +46,27 @@ const app=document.getElementById('app');
 const shell=document.getElementById('shell');
 const googleLayer=document.getElementById('googleLayer');
 const googleStatus=document.getElementById('googleStatus');
-let appSource=null,googleClientId='892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com',googleReady=false;
+let appSource=null,appOrigin='',googleClientId='892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com',googleReady=false;
 
 function trustedAppMessage(event){
+  if(event.source!==app.contentWindow)return false;
   try{
-    const host=new URL(event.origin).hostname;
-    return event.origin==='null'||event.origin==='https://script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com');
+    const url=new URL(event.origin),host=url.hostname;
+    return url.protocol==='https:'&&(host==='script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com'));
   }catch(_){return false;}
 }
-function send(payload){const target=appSource||app.contentWindow;if(target)target.postMessage(payload,'*');}
+function bindAppMessage(event){
+  if(!trustedAppMessage(event))return false;
+  appSource=event.source;
+  appOrigin=event.origin;
+  return true;
+}
+function send(payload,bootstrap=false){
+  const target=appSource||app.contentWindow;
+  if(!target)return;
+  if(appOrigin)target.postMessage(payload,appOrigin);
+  else if(bootstrap)target.postMessage(payload,'*');
+}
 function ensureStableDevice_(){
   try{
     const storage='apps.admin.device.v1';
@@ -70,14 +82,11 @@ function collectMigrationStorage(){
   const values={};
   try{
     ensureStableDevice_();
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
-      if(!key)continue;
-      if(key==='apps.admin.device.v1'||key==='revisorCargoFiscal.admin.device.v1'||key==='revisorCargoFiscal.acceso.v1'||key==='revisorCargoFiscal.admin.recordado.v1'||key==='revisorCargoFiscal.usuario'||/^revisorCargoFiscal\.v\d+$/.test(key)){
-        const value=localStorage.getItem(key);
-        if(typeof value==='string')values[key]=value;
-      }
-    }
+    const allowed=['apps.admin.device.v1','revisorCargoFiscal.admin.device.v1','revisorCargoFiscal.admin.recordado.v1'];
+    allowed.forEach(key=>{
+      const value=localStorage.getItem(key);
+      if(typeof value==='string')values[key]=value;
+    });
   }catch(_){}
   return values;
 }
@@ -108,8 +117,7 @@ function initGoogle(){
   googleReady=true;
 }
 window.addEventListener('message',event=>{
-  if(!trustedAppMessage(event)||!event.source||!event.data)return;
-  appSource=event.source;
+  if(!event.data||!bindAppMessage(event))return;
   const d=event.data;
   if(d.type==='apps-revisor-bridge-ready'&&d.app==='revisor'){
     if(typeof d.googleClientId==='string'&&/\.apps\.googleusercontent\.com$/.test(d.googleClientId))googleClientId=d.googleClientId;
@@ -124,7 +132,7 @@ window.addEventListener('message',event=>{
     if(d.ok===true)clearMigratedSensitiveStorage();
   }
 });
-app.addEventListener('load',()=>{shell.classList.add('ready');send({type:'apps-revisor-bridge-request',app:'revisor'});});
+app.addEventListener('load',()=>{shell.classList.add('ready');send({type:'apps-revisor-bridge-request',app:'revisor'},true);});
 window.addEventListener('load',initGoogle,{once:true});
 </script>
 </body>
