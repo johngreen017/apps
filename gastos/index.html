@@ -57,6 +57,7 @@ let googleReady=false;
 
 function trustedAppMessage(event){
   if(event.source!==app.contentWindow)return false;
+  if(event.origin==='null'||event.origin==="null")return true;
   try{
     const url=new URL(event.origin),host=url.hostname;
     return url.protocol==="https:"&&(host==="script.google.com"||host==="googleusercontent.com"||host.endsWith(".googleusercontent.com"));
@@ -71,8 +72,8 @@ function bindAppMessage(event){
 function send(payload,bootstrap=false){
   const target=appSource||app.contentWindow;
   if(!target)return;
-  if(appOrigin)target.postMessage(payload,appOrigin);
-  else if(bootstrap)target.postMessage(payload,"*");
+  if(appOrigin&&appOrigin!=="null")target.postMessage(payload,appOrigin);
+  else if(appSource||bootstrap)target.postMessage(payload,"*");
 }
 function stableDevice(){
   try{
