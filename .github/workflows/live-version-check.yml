@@ -2,6 +2,10 @@ name: Verificar versión pública real
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-version-check.yml'
 
 permissions:
   contents: read
