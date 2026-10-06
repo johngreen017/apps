@@ -31,8 +31,22 @@
     const ua=navigator.userAgent||'',ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
     return (ipad||/Mobi|Android|iPhone|iPod/i.test(ua)?'mobile':'desktop')+':'+key;
   }
-  function trustedOrigin(origin){try{const u=new URL(origin);return u.protocol==='https:'&&!u.port&&(u.hostname==='script.google.com'||u.hostname.endsWith('.googleusercontent.com'));}catch(_){return false;}}
-  function send(payload){if(!source)return false;source.postMessage({...payload,channel,app:appId},sourceOrigin);return true;}
+  function trustedOrigin(origin){
+    // Apps Script normalmente usa script.google.com/googleusercontent.com.
+    // En algunos navegadores el iframe sandboxed usa un origen opaco ("null").
+    // Ese caso solo puede enlazarse si además presenta el canal aleatorio de 256 bits
+    // generado para esta apertura; luego fijamos event.source para toda la sesión.
+    if(origin==='null')return true;
+    try{
+      const u=new URL(origin);
+      return u.protocol==='https:'&&!u.port&&(u.hostname==='script.google.com'||u.hostname.endsWith('.googleusercontent.com'));
+    }catch(_){return false;}
+  }
+  function send(payload){
+    if(!source)return false;
+    source.postMessage({...payload,channel,app:appId},sourceOrigin==='null'?'*':sourceOrigin);
+    return true;
+  }
   function loadGoogle(){
     if(googlePromise)return googlePromise;
     googlePromise=new Promise((resolve,reject)=>{
