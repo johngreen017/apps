@@ -22,6 +22,11 @@
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /Android/i.test(ua);
 
+  // La guía se ofrece solo en plataformas móviles:
+  // iOS/iPadOS usa "Agregar a inicio" y Android puede usar instalación PWA.
+  // En Windows, macOS y otros escritorios el enlace abre normalmente sin guía.
+  if (!isIOS && !isAndroid) return;
+
   let deferredPrompt = null;
   let primaryButton = null;
   let helperText = null;
@@ -144,10 +149,6 @@
     addStep(1, 'Instala la aplicación', 'Usa el botón de abajo cuando esté disponible.');
     addStep(2, 'Confirma la instalación', 'Android agregará el icono a tu pantalla de inicio.');
     addStep(3, 'Abre desde el icono', 'Desde ahí funcionará como una aplicación independiente.');
-  } else {
-    addStep(1, 'Busca “Instalar” en el navegador', 'Chrome y Edge suelen mostrar un icono de instalación en la barra.');
-    addStep(2, 'Confirma', 'La aplicación quedará disponible como acceso independiente.');
-    addStep(3, 'Ábrela desde su icono', 'No necesitarás volver al enlace de WhatsApp.');
   }
 
   const note = document.createElement('p');
