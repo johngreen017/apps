@@ -120,6 +120,7 @@
     const device=stableDevice();
     const url=new URL(app.dataset.src);
     url.searchParams.set('device',device);
+    url.searchParams.set('embedded','true');
     channel=hex();
     url.searchParams.set('bridge',channel);
     if(windowsDirect)url.searchParams.set('direct','1');
