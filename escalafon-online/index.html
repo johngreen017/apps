@@ -26,22 +26,29 @@
     #googleLayer[hidden]{display:none}#googleButton{min-height:44px;display:flex;justify-content:center}
     #googleStatus{margin:7px 0 0;color:#51675f;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
   </style>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer>function startAppWithStableDevice_(){
+  const base=app.dataset.src||'';
+  if(!base)return;
+  const device=stableDevice();
+  app.src=base+(base.includes('?')?'&':'?')+'device='+encodeURIComponent(device||'');
+}
+startAppWithStableDevice_();
+</script>
 </head>
 <body>
   <main id="shell">
     <div id="loading">Abriendo Escalafón Online…</div>
     <iframe id="app" title="Escalafón Online"
-      src="https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-0857"
+      data-src="https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-0608-r2"
       allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
   </main>
   <section id="googleLayer" hidden>
     <div id="googleButton"></div>
-    <p id="googleStatus">Acceso seguro con Google · v0857</p>
+    <p id="googleStatus">Acceso seguro con Google · 20261006-0608-r2</p>
   </section>
   <noscript>Activa JavaScript para abrir Escalafón Online.</noscript>
 <script>
-const ACCESS_BUILD='20261006-0857';
+const ACCESS_BUILD='20261006-0608-r2';
 const app=document.getElementById('app');
 const shell=document.getElementById('shell');
 const googleLayer=document.getElementById('googleLayer');
