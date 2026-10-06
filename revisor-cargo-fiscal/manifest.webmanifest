@@ -1,6 +1,6 @@
 {
-  "name": "Revisor de Cargo Fiscal",
-  "short_name": "Revisor Cargo",
+  "name": "Revisor Cargo L5",
+  "short_name": "Revisor Cargo L5",
   "start_url": "./?build=20261006-0608-r2",
   "scope": "./",
   "display": "standalone",
