@@ -1,9 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),crypto=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../access-bridge.js'),'utf8');
-function boot(saved=new Map()){
+function boot(saved=new Map(),nav={}){
  const handlers={},timers=new Map();let tid=0;const classList={add(){},remove(){}};
  const elements=new Map();const el=id=>{if(!elements.has(id))elements.set(id,{id,classList,hidden:true,textContent:'',dataset:{app:'revisor',src:'https://script.google.com/macros/s/test/exec'},addEventListener(){}});return elements.get(id);};
- const context={URL,Uint8Array,crypto:crypto.webcrypto,console:{info(){}},Date,Math,location:{href:'https://johngreen017.github.io/apps/revisor-cargo-fiscal/',reload(){}},navigator:{platform:'iPhone',userAgent:'iPhone',maxTouchPoints:5},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},document:{getElementById:el,createElement:()=>({}),head:{appendChild(){}}},setTimeout:f=>{timers.set(++tid,f);return tid;},clearTimeout:i=>timers.delete(i)};
+ const context={URL,Uint8Array,crypto:crypto.webcrypto,console:{info(){}},Date,Math,location:{href:'https://johngreen017.github.io/apps/revisor-cargo-fiscal/',reload(){}},navigator:{platform:nav.platform||'iPhone',userAgent:nav.userAgent||'iPhone',maxTouchPoints:nav.maxTouchPoints??5},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},document:{getElementById:el,createElement:()=>({}),head:{appendChild(){}}},setTimeout:f=>{timers.set(++tid,f);return tid;},clearTimeout:i=>timers.delete(i)};
  context.window={addEventListener:(name,f)=>handlers[name]=f,innerWidth:390};vm.runInNewContext(source,context);
  const url=new URL(el('app').src),channel=url.searchParams.get('bridge'),sent=[];
  const inner={postMessage:(d,origin)=>sent.push({d,origin})};
@@ -15,3 +15,5 @@ test('only nonce-bound bridge-ready binds the real inner frame; subsequent frame
 test('opaque sandbox origin can bind only with the correct nonce and receives ack through wildcard target',async()=>{const a=boot();await a.emit({type:'apps-bridge-ready',version:1},'null');assert.equal(a.sent.length,1);assert.equal(a.sent[0].d.type,'apps-bridge-ack');assert.equal(a.sent[0].origin,'*');});
 test('missing bridge exposes bounded error and a retry action',()=>{const a=boot();[...a.timers.values()].forEach(f=>f());assert.match(a.el('loadingText').textContent,/Último estado: OPENING/);assert.equal(a.el('retry').hidden,false);});
 test('all mobile and Windows entrypoints use the same executable bridge',()=>{for(const folder of ['escalafon-online','revisor-cargo-fiscal','simulador-remuneraciones'])for(const file of ['index.html','windows.html']){const html=fs.readFileSync(require('node:path').join(__dirname,'..',folder,file),'utf8');assert.match(html,/src="\.\.\/access-bridge.js\?v=/);assert.doesNotMatch(html,/<script[^>]+src=[^>]+>\s*function/);}});
+
+test('Windows direct mode never redirects the top page and tags the iframe URL as direct',()=>{const a=boot(new Map(),{platform:'Win32',userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',maxTouchPoints:0});assert.equal(a.url.searchParams.get('direct'),'1');assert.match(a.url.searchParams.get('device'),/^desktop:[a-f0-9]{64}$/);});
