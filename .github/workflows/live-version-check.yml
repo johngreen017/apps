@@ -131,7 +131,11 @@ jobs:
           grep -Eqi 'Google|vinculad|confiable' "$body"
 
           echo "===== Contrato frontend Vercel ====="
+          esc="$(curl -sS -L --connect-timeout 10 --max-time 30 https://escalafon-pns.vercel.app/)"
           rev="$(curl -sS -L --connect-timeout 10 --max-time 30 https://revisor-cargo-l5.vercel.app/)"
           sim="$(curl -sS -L --connect-timeout 10 --max-time 30 https://simulador-remuneraciones-delta.vercel.app/)"
           grep -Fq "return body;})" <<<"$rev"
           grep -Fq "return body;})" <<<"$sim"
+          ! grep -Fq "script.google.com" <<<"$esc"
+          ! grep -Fq "script.google.com" <<<"$rev"
+          ! grep -Fq "script.google.com" <<<"$sim"
