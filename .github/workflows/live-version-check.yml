@@ -44,3 +44,11 @@ jobs:
           check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec" "El dispositivo confiable todavía se está sincronizando."
           check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec" "[120,350,800,1500,2400]"
           check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec" "[120,350,800,1500,2400]"
+
+          echo "===== Fragmentos reales Revisor ====="
+          curl -sS -L -H 'Cache-Control: no-cache' "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec?inspect=$(date +%s)" \
+            | grep -nE 'bridgeStorageReady|1200|3500|apps-admin-google-required|adminGoogleInitialized' | head -50 || true
+
+          echo "===== Fragmentos reales Simulador ====="
+          curl -sS -L -H 'Cache-Control: no-cache' "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec?inspect=$(date +%s)" \
+            | grep -nE 'bridgeStorageReady|1200|3500|apps-admin-google-required|adminGoogleInitialized' | head -50 || true
