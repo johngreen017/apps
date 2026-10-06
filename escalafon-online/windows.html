@@ -19,155 +19,29 @@
   <title>Escalafón Online · Windows</title>
   <style>
     *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#eaf0ec}
-    #shell{position:fixed;inset:0;background:#eaf0ec}iframe{position:absolute;inset:0;width:100%;height:calc(100% + 52px);border:0}
+    #shell{position:fixed;inset:0;background:#eaf0ec}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
     #loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;z-index:2;color:#174b35;font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eaf0ec}
     .ready #loading{display:none}
     #googleLayer{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;width:min(92vw,360px);padding:12px;background:#fffffff2;border:1px solid #d5e4dc;border-radius:15px;box-shadow:0 10px 30px #0d30242e;text-align:center}
     #googleLayer[hidden]{display:none}#googleButton{min-height:44px;display:flex;justify-content:center}
     #googleStatus{margin:7px 0 0;color:#51675f;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  #bridgeDiagnostics{position:fixed;top:calc(8px + env(safe-area-inset-top));right:8px;z-index:20;max-width:94vw;background:#fff;color:#174b35;padding:6px 10px;border:1px solid #b9cabe;border-radius:8px;font:12px system-ui}#bridgeDiagnostics pre{white-space:pre-wrap;max-height:45vh;overflow:auto}#retry{padding:12px 22px;border-radius:10px;font:inherit}#loading{text-align:center}#shell{top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom)}
   </style>
-  <script src="https://accounts.google.com/gsi/client" async defer>function startAppWithStableDevice_(){
-  const base=app.dataset.src||'';
-  if(!base)return;
-  const device=stableDevice();
-  app.src=base+(base.includes('?')?'&':'?')+'device='+encodeURIComponent(device||'');
-}
-startAppWithStableDevice_();
-</script>
+  
 </head>
 <body>
   <main id="shell">
-    <div id="loading">Abriendo Escalafón Online…</div>
-    <iframe id="app" title="Escalafón Online"
-      data-src="https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-0608-r2"
+    <div id="loading"><div><p id="loadingText">Abriendo Escalafón Online…</p><button id="retry" hidden>Reintentar</button></div></div>
+    <iframe id="app" data-app="escalafon" title="Escalafón Online"
+      data-src="https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-b1"
       allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
   </main>
+  <details id="bridgeDiagnostics"><summary id="bridgeSummary">Diagnóstico</summary><pre id="bridgeTrace"></pre></details>
   <section id="googleLayer" hidden>
     <div id="googleButton"></div>
-    <p id="googleStatus">Acceso seguro con Google · 20261006-0608-r2</p>
+    <p id="googleStatus">Acceso seguro con Google · 20261006-b1</p>
   </section>
   <noscript>Activa JavaScript para abrir Escalafón Online.</noscript>
-<script>
-const ACCESS_BUILD='20261006-0608-r2';
-const app=document.getElementById('app');
-const shell=document.getElementById('shell');
-const googleLayer=document.getElementById('googleLayer');
-const googleStatus=document.getElementById('googleStatus');
-let appSource=null,appOrigin='',googleClientId='',oneSignalAppId='',googleReady=false,owner=false,oneSignal=null,oneSignalLoading=false;
-let googleRetryCount=0;
-
-function trustedAppMessage(event){
-  if(!event||!event.data)return false;
-  try{
-    const url=new URL(event.origin),host=url.hostname;
-    return url.protocol==='https:'&&(host==='script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com'));
-  }catch(_){return false;}
-}
-function bindAppMessage(event){
-  if(!trustedAppMessage(event))return false;
-  appSource=event.source;
-  appOrigin=event.origin;
-  return true;
-}
-function send(payload,bootstrap=false){
-  const target=appSource||app.contentWindow;
-  if(!target)return;
-  if(appOrigin&&appOrigin!=='null')target.postMessage(payload,appOrigin);
-  else if(appSource||bootstrap)target.postMessage(payload,'*');
-}
-function stableDevice(){
-  try{
-    const storage='apps.admin.device.v1';
-    let key=localStorage.getItem(storage);
-    if(!key){const b=crypto.getRandomValues(new Uint8Array(32));key=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(storage,key);}
-    if(!/^[a-f0-9]{64}$/.test(key))return '';
-    const ua=navigator.userAgent||'',ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-    return ((ipad||/Mobi|Android|iPhone|iPod/i.test(ua))?'mobile':'desktop')+':'+key;
-  }catch(_){return '';}
-}
-function shareDevice(){const device=stableDevice();if(device)send({type:'escalafon-device-key',device});}
-function requestConfig(){send({type:'escalafon-request-bridge-config'},true);}
-
-function initGoogle(){
-  if(googleReady||!googleClientId)return;
-  if(!window.google?.accounts?.id){
-    if(googleRetryCount++<40)setTimeout(initGoogle,250);
-    return;
-  }
-  googleRetryCount=0;
-  google.accounts.id.initialize({
-    client_id:googleClientId,
-    callback:r=>{
-      const credential=r&&r.credential;
-      if(!credential){googleStatus.textContent='Google no entregó una credencial válida.';return;}
-      googleStatus.textContent='Validando la cuenta…';
-      send({type:'escalafon-google-credential',credential});
-    },
-    auto_select:false,cancel_on_tap_outside:false
-  });
-  google.accounts.id.renderButton(document.getElementById('googleButton'),{type:'standard',theme:'outline',size:'large',text:'signin_with',shape:'rectangular',width:320,locale:'es'});
-  googleReady=true;
-}
-function ensureOneSignal(){
-  if(!owner||!oneSignalAppId||oneSignal||oneSignalLoading)return;
-  oneSignalLoading=true;
-  window.OneSignalDeferred=window.OneSignalDeferred||[];
-  OneSignalDeferred.push(async sdk=>{
-    oneSignal=sdk;oneSignalLoading=false;
-    await sdk.init({appId:oneSignalAppId,serviceWorkerParam:{scope:'/apps/escalafon-online/'},serviceWorkerPath:'/apps/escalafon-online/OneSignalSDKWorker.js'});
-    await sharePush();
-  });
-  const s=document.createElement('script');s.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';s.defer=true;s.onerror=()=>{oneSignalLoading=false};document.head.appendChild(s);
-}
-async function sharePush(){
-  if(!owner||!oneSignal||!oneSignal.User.PushSubscription.optedIn)return;
-  const id=oneSignal.User.PushSubscription.id;
-  if(id)send({type:'escalafon-push-subscription',subscriptionId:id});
-  send({type:'escalafon-push-status',enabled:!!id});
-}
-async function enablePush(){
-  owner=true;ensureOneSignal();
-  if(!oneSignal){send({type:'escalafon-push-status',enabled:false,error:'Las notificaciones todavía se están preparando. Inténtalo nuevamente.'});return;}
-  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.navigator.standalone){send({type:'escalafon-push-status',enabled:false,error:'Abre Escalafón Online desde su icono en la pantalla de inicio para activar notificaciones.'});return;}
-  try{
-    await oneSignal.Notifications.requestPermission();
-    await oneSignal.User.PushSubscription.optIn();
-    await sharePush();
-    if(!oneSignal.User.PushSubscription.optedIn)send({type:'escalafon-push-status',enabled:false,error:'El permiso de notificaciones no fue concedido.'});
-  }catch(_){send({type:'escalafon-push-status',enabled:false,error:'No fue posible activar las notificaciones.'});}
-}
-
-window.addEventListener('message',async event=>{
-  if(!event.data||!bindAppMessage(event))return;
-  const d=event.data;
-  if(d.type==='escalafon-bridge-config'){
-    if(typeof d.googleClientId==='string'&&/\.apps\.googleusercontent\.com$/.test(d.googleClientId))googleClientId=d.googleClientId;
-    if(typeof d.oneSignalAppId==='string'&&/^[a-f0-9-]{36}$/i.test(d.oneSignalAppId))oneSignalAppId=d.oneSignalAppId;
-    initGoogle();ensureOneSignal();shareDevice();
-  }else if(d.type==='escalafon-request-device-key'){
-    shareDevice();
-  }else if(d.type==='escalafon-google-login'){
-    googleLayer.hidden=d.visible!==true;
-    if(!googleLayer.hidden){shell.classList.add('ready');initGoogle();}
-  }else if(d.type==='escalafon-google-result'){
-    if(d.ok===true)googleLayer.hidden=true;
-    else googleStatus.textContent='No se pudo ingresar con Google.';
-  }else if(d.type==='escalafon-app-ready'){
-    shell.classList.add('ready');
-  }else if(d.type==='escalafon-owner-session'){
-    owner=d.owner===true;ensureOneSignal();if(owner)await sharePush();
-  }else if(d.type==='escalafon-enable-push'){
-    await enablePush();
-  }
-});
-app.addEventListener('load',()=>{
-  shell.classList.add('ready');
-  [0,120,350,800,1500,2800].forEach(ms=>setTimeout(requestConfig,ms));
-});
-window.addEventListener('load',()=>{
-  initGoogle();
-  [0,150,500,1100,2200,3500].forEach(ms=>setTimeout(requestConfig,ms));
-},{once:true});
-</script>
+<script src="../access-bridge.js?v=20261006-b1" defer></script>
 </body>
 </html>
