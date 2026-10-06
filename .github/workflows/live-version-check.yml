@@ -107,6 +107,18 @@ jobs:
           grep -Fq "return body;})" <<<"$esc"
           grep -Fq "return body;})" <<<"$rev"
           grep -Fq "return body;})" <<<"$sim"
+
+          echo "===== Panel Gestionar accesos ====="
+          for page in "$rev" "$sim"; do
+            grep -Fq "Autoriza solicitudes o agrega usuarios directamente. Cada cuenta admite 1 móvil/tablet y 1 computador." <<<"$page"
+            grep -Fq "admin-access-form" <<<"$page"
+            grep -Fq "admin-refresh" <<<"$page"
+            grep -Fq "admin-user-actions" <<<"$page"
+            grep -Fq "width:min(1180px,100%)" <<<"$page"
+            grep -Fq "padding:28px 30px" <<<"$page"
+            grep -Fq "font-size:26px" <<<"$page"
+          done
+
           ! grep -Fq "script.google.com" <<<"$esc"
           ! grep -Fq "script.google.com" <<<"$rev"
           ! grep -Fq "script.google.com" <<<"$sim"
