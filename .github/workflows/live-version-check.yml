@@ -99,3 +99,39 @@ jobs:
           api_check "Escalafon" "https://escalafon-pns.vercel.app/api/rpc" '{"method":"ownerDeviceStatus","args":["'"$DEVICE"'"]}'
           api_check "Revisor" "https://revisor-cargo-l5.vercel.app/api/rpc" '{"method":"bridgeApi","args":["estadoDispositivoAdministrador",{"device":"'"$DEVICE"'"}]}'
           api_check "Simulador" "https://simulador-remuneraciones-delta.vercel.app/api/rpc" '{"method":"bridgeApi","args":["estadoDispositivoAdministrador",{"device":"'"$DEVICE"'"}]}'
+
+          echo "===== Flujo previo a Google Revisor ====="
+          body="$(mktemp)"
+          curl -sS -L --connect-timeout 10 --max-time 30 -o "$body" \
+            -H 'content-type: application/json' \
+            --data '{"method":"bridgeApi","args":["prepararIngreso",{"email":"john.green017@gmail.com","device":"'"$DEVICE"'"}]}' \
+            "https://revisor-cargo-l5.vercel.app/api/rpc"
+          cat "$body"; echo
+          grep -Fq '"ok":true' "$body"
+          grep -Fq '"owner":true' "$body"
+
+          echo "===== Flujo previo a Google Simulador ====="
+          body="$(mktemp)"
+          curl -sS -L --connect-timeout 10 --max-time 30 -o "$body" \
+            -H 'content-type: application/json' \
+            --data '{"method":"bridgeApi","args":["prepararIngreso",{"email":"john.green017@gmail.com","device":"'"$DEVICE"'"}]}' \
+            "https://simulador-remuneraciones-delta.vercel.app/api/rpc"
+          cat "$body"; echo
+          grep -Fq '"ok":true' "$body"
+          grep -Fq '"owner":true' "$body"
+
+          echo "===== Escalafón exige Google en dispositivo no confiable ====="
+          body="$(mktemp)"
+          curl -sS -L --connect-timeout 10 --max-time 30 -o "$body" \
+            -H 'content-type: application/json' \
+            --data '{"method":"loginEmail","args":["john.green017@gmail.com","","'"$DEVICE"'"]}' \
+            "https://escalafon-pns.vercel.app/api/rpc"
+          cat "$body"; echo
+          grep -Fq '"ok":false' "$body"
+          grep -Eqi 'Google|vinculad|confiable' "$body"
+
+          echo "===== Contrato frontend Vercel ====="
+          rev="$(curl -sS -L --connect-timeout 10 --max-time 30 https://revisor-cargo-l5.vercel.app/)"
+          sim="$(curl -sS -L --connect-timeout 10 --max-time 30 https://simulador-remuneraciones-delta.vercel.app/)"
+          grep -Fq "return body;})" <<<"$rev"
+          grep -Fq "return body;})" <<<"$sim"
