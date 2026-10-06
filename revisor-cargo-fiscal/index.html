@@ -45,6 +45,7 @@ const shell=document.getElementById('shell');
 const googleLayer=document.getElementById('googleLayer');
 const googleStatus=document.getElementById('googleStatus');
 let appSource=null,appOrigin='',googleClientId='892491045559-mt2b7iabv71djbu6icf6rpl2a2fa90e8.apps.googleusercontent.com',googleReady=false;
+let googleRetryCount=0;
 
 function trustedAppMessage(event){
   if(event.source!==app.contentWindow)return false;
@@ -101,7 +102,12 @@ function clearMigratedSensitiveStorage(){
   }catch(_){}
 }
 function initGoogle(){
-  if(googleReady||!googleClientId||!window.google?.accounts?.id)return;
+  if(googleReady||!googleClientId)return;
+  if(!window.google?.accounts?.id){
+    if(googleRetryCount++<40)setTimeout(initGoogle,250);
+    return;
+  }
+  googleRetryCount=0;
   google.accounts.id.initialize({
     client_id:googleClientId,
     callback:r=>{
@@ -131,8 +137,15 @@ window.addEventListener('message',event=>{
     if(d.ok===true)clearMigratedSensitiveStorage();
   }
 });
-app.addEventListener('load',()=>{shell.classList.add('ready');send({type:'apps-revisor-bridge-request',app:'revisor'},true);});
-window.addEventListener('load',initGoogle,{once:true});
+function requestBridge_(){send({type:'apps-revisor-bridge-request',app:'revisor'},true);}
+app.addEventListener('load',()=>{
+  shell.classList.add('ready');
+  [0,120,350,800,1500,2800].forEach(ms=>setTimeout(requestBridge_,ms));
+});
+window.addEventListener('load',()=>{
+  initGoogle();
+  [0,150,500,1100,2200,3500].forEach(ms=>setTimeout(requestBridge_,ms));
+},{once:true});
 </script>
 </body>
 </html>
