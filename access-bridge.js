@@ -7,7 +7,8 @@
   const prefix=appId==='escalafon'?'escalafon-':'apps-'+appId+'-';
   const logoutKey='apps.'+appId+'.signed-out.v1';
   const trace=document.getElementById('bridgeTrace'),summary=document.getElementById('bridgeSummary');
-  let source=null,sourceOrigin='',channel='',timer,lastState='OPENING',googlePromise,googleReady=false,owner=false,oneSignal=null;
+  const windowsDirect=/Windows NT/i.test(navigator.userAgent||'');
+  let source=null,sourceOrigin='',channel='',timer,lastState='OPENING',googlePromise,googleReady=false,owner=false,oneSignal=null,appAssigned=false;
   const events=[];
   function log(state,detail=''){
     events.push(new Date().toLocaleTimeString('es-CL')+' '+state+(detail?' · '+detail:''));
@@ -15,7 +16,7 @@
     console.info('[access]',state,detail);
   }
   function fail(message){clearTimeout(timer);log('ERROR',message);document.getElementById('bridgeDiagnostics').open=true;shell.classList.remove('ready');document.getElementById('loadingText').textContent=message;document.getElementById('retry').hidden=false;}
-  function deadline(){clearTimeout(timer);timer=setTimeout(()=>fail('No se completó el acceso. Último estado: '+lastState+'. Pulsa Reintentar.'),30000);}
+  function deadline(){clearTimeout(timer);if(windowsDirect)return;timer=setTimeout(()=>fail('No se completó el acceso. Último estado: '+lastState+'. Pulsa Reintentar.'),30000);}
   function transition(state,detail=''){
     lastState=state;log(state,detail);
     if(['LOGIN_READY','GOOGLE_REQUIRED','GOOGLE_READY','APP_READY'].includes(state)){clearTimeout(timer);shell.classList.add('ready');}
@@ -113,7 +114,7 @@
     }
   });
   document.getElementById('retry').onclick=()=>location.reload();
-  app.addEventListener('load',()=>log('IFRAME_LOADED'));
+  app.addEventListener('load',()=>{log('IFRAME_LOADED');if(windowsDirect&&appAssigned)transition('APP_READY','Windows: iframe cargado');});
   log('LAUNCHER_LOADED');
   try{
     const device=stableDevice();
@@ -121,8 +122,9 @@
     url.searchParams.set('device',device);
     channel=hex();
     url.searchParams.set('bridge',channel);
-    if(/Windows NT/i.test(navigator.userAgent||''))url.searchParams.set('direct','1');
+    if(windowsDirect)url.searchParams.set('direct','1');
     transition('OPENING');
+    appAssigned=true;
     app.src=url.href;
   }catch(e){fail(e.message||'Habilita el almacenamiento del navegador para identificar este dispositivo.');}
 })();
