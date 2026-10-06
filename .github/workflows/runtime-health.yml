@@ -35,12 +35,12 @@ jobs:
             simulador-remuneraciones/index.html simulador-remuneraciones/windows.html
           )
           if grep -En 'credentialless|<iframe[^>]*sandbox=|^[[:space:]]*sandbox=' "${files[@]}"; then
-            echo "Se detectó aislamiento de iframe incompatible con el runtime de Apps Script."
+            echo "Se detectó aislamiento de iframe incompatible con el runtime de Vercel."
             exit 1
           fi
           node --test tests/access-bridge.test.cjs
 
-      - name: Comprobar GitHub Pages y Apps Script
+      - name: Comprobar GitHub Pages y Vercel
         shell: bash
         run: |
           set -euo pipefail
@@ -65,12 +65,12 @@ jobs:
 
           check_url "GitHub Pages Escalafón"             "https://johngreen017.github.io/apps/escalafon-online/"             "Abriendo Escalafón Online"
 
-          check_url "Apps Script Escalafón"             "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec"             "Escalafón de Oficiales"
+          check_url "Vercel Escalafón"             "https://escalafon-pns.vercel.app/"             "Escalafón de Oficiales"
 
           check_url "GitHub Pages Revisor"             "https://johngreen017.github.io/apps/revisor-cargo-fiscal/"             "Abriendo Revisor de Cargo Fiscal"
 
-          check_url "Apps Script Revisor"             "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec"             "Revisor de Cargo Fiscal"
+          check_url "Vercel Revisor"             "https://revisor-cargo-l5.vercel.app/"             "Revisor de Cargo Fiscal"
 
           check_url "GitHub Pages Simulador"             "https://johngreen017.github.io/apps/simulador-remuneraciones/"             "Abriendo Simulador de Remuneraciones"
 
-          check_url "Apps Script Simulador"             "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec"             "Simulador de Remuneraciones"
+          check_url "Vercel Simulador"             "https://simulador-remuneraciones-delta.vercel.app/"             "Simulador de Remuneraciones"
