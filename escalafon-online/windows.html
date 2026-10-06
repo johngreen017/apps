@@ -57,8 +57,7 @@ let appSource=null,appOrigin='',googleClientId='',oneSignalAppId='',googleReady=
 let googleRetryCount=0;
 
 function trustedAppMessage(event){
-  if(event.source!==app.contentWindow)return false;
-  if(event.origin==='null'||event.origin==="null")return true;
+  if(!event||!event.data)return false;
   try{
     const url=new URL(event.origin),host=url.hostname;
     return url.protocol==='https:'&&(host==='script.google.com'||host==='googleusercontent.com'||host.endsWith('.googleusercontent.com'));
