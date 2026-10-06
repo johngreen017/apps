@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verificar puente interno de Apps Script
+      - name: Verificar puente interno Vercel
         shell: bash
         run: |
           set -euo pipefail
@@ -42,11 +42,11 @@ jobs:
           node --check install-guide.js
           grep -F 'install-guide.js?v=20261006-install3' escalafon-online/index.html revisor-cargo-fiscal/index.html simulador-remuneraciones/index.html >/dev/null
           if grep -F "if(event.source!==app.contentWindow)return false;" "${files[@]}"; then
-            echo "Persistió la validación incompatible con el iframe interno de Apps Script."
+            echo "Persistió una validación antigua incompatible con el puente Vercel."
             exit 1
           fi
 
-      - name: Comparar contenido público con y sin cache busting
+      - name: Comparar contenido público y probar API Vercel
         shell: bash
         run: |
           set -euo pipefail
@@ -56,25 +56,46 @@ jobs:
               echo "===== $name $suffix ====="
               body="$(mktemp)"
               headers="$(mktemp)"
-              curl -sS -L --connect-timeout 10 --max-time 30 -D "$headers" -o "$body"                 -H 'Cache-Control: no-cache, no-store, max-age=0'                 -H 'Pragma: no-cache'                 -A 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'                 "$url$suffix"
+              curl -sS -L --connect-timeout 10 --max-time 30 -D "$headers" -o "$body" \
+                -H 'Cache-Control: no-cache, no-store, max-age=0' \
+                -H 'Pragma: no-cache' \
+                -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/141.0 Safari/537.36' \
+                "$url$suffix"
               grep -Ei '^(HTTP/|cache-control:|age:|etag:|last-modified:|content-type:|location:)' "$headers" | tail -30 || true
               if grep -Fq "$marker" "$body"; then
                 echo "MARKER=SI"
               else
                 echo "MARKER=NO"
                 echo "--- fragmento ---"
-                head -c 800 "$body" | tr '\n' ' '
+                head -c 1000 "$body" | tr '\n' ' '
                 echo
                 exit 1
               fi
             done
           }
 
-          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-win5" "access-bridge.js?v=20261006-win5"
-          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-win5" "access-bridge.js?v=20261006-win5"
-          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-win5" "access-bridge.js?v=20261006-win5"
+          api_check() {
+            local name="$1" url="$2" json="$3"
+            echo "===== API $name ====="
+            body="$(mktemp)"
+            code="$(curl -sS -L --connect-timeout 10 --max-time 30 -o "$body" -w '%{http_code}' \
+              -H 'content-type: application/json' \
+              --data "$json" "$url")"
+            cat "$body"
+            echo
+            test "$code" = "200"
+            grep -Fq '"ok":true' "$body"
+          }
 
-          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-push4" "apps-bridge-ready"
-          check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec?build=20261006-push3" "apps-bridge-ready"
-          check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec?build=20261006-push3" "apps-bridge-ready"
+          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-vercel1" "access-bridge.js?v=20261006-vercel1"
+          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-vercel1" "access-bridge.js?v=20261006-vercel1"
+          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-vercel1" "access-bridge.js?v=20261006-vercel1"
 
+          check "Escalafon Vercel" "https://escalafon-pns.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
+          check "Revisor Vercel" "https://revisor-cargo-l5.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
+          check "Simulador Vercel" "https://simulador-remuneraciones-delta.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
+
+          DEVICE='desktop:0000000000000000000000000000000000000000000000000000000000000000'
+          api_check "Escalafon" "https://escalafon-pns.vercel.app/api/rpc" '{"method":"ownerDeviceStatus","args":["'"$DEVICE"'"]}'
+          api_check "Revisor" "https://revisor-cargo-l5.vercel.app/api/rpc" '{"method":"bridgeApi","args":["estadoDispositivoAdministrador",{"device":"'"$DEVICE"'"}]}'
+          api_check "Simulador" "https://simulador-remuneraciones-delta.vercel.app/api/rpc" '{"method":"bridgeApi","args":["estadoDispositivoAdministrador",{"device":"'"$DEVICE"'"}]}'
