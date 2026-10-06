@@ -41,6 +41,6 @@ jobs:
           check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/" "googleRetryCount"
           check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/" "googleRetryCount"
 
-          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec" "OWNER_TRUST_RESET_VERSION_"
-          check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec" "ADMIN_TRUST_RESET_VERSION_"
-          check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec" "ADMIN_TRUST_RESET_VERSION_"
+          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec" "El dispositivo confiable todavía se está sincronizando."
+          check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec" "Reenviar siempre la solicitud evita perder el botón de Google."
+          check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec" "Reenviar siempre la solicitud evita perder el botón de Google."
