@@ -116,7 +116,18 @@
   app.addEventListener('load',()=>log('IFRAME_LOADED'));
   log('LAUNCHER_LOADED');
   try{
-    const device=stableDevice();channel=hex();const url=new URL(app.dataset.src);url.searchParams.set('device',device);url.searchParams.set('bridge',channel);
-    transition('OPENING');app.src=url.href;
+    const device=stableDevice();
+    const url=new URL(app.dataset.src);
+    url.searchParams.set('device',device);
+    if(/Windows NT/i.test(navigator.userAgent||'')){
+      url.searchParams.delete('bridge');
+      url.searchParams.set('direct','1');
+      location.replace(url.href);
+      return;
+    }
+    channel=hex();
+    url.searchParams.set('bridge',channel);
+    transition('OPENING');
+    app.src=url.href;
   }catch(e){fail(e.message||'Habilita el almacenamiento del navegador para identificar este dispositivo.');}
 })();
