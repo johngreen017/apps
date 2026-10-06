@@ -65,22 +65,34 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    #installGuide{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));background:rgba(16,40,31,.72);backdrop-filter:blur(8px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    #installGuide .ig-card{width:min(430px,100%);max-height:calc(100% - 4px);overflow:auto;background:#fff;border-radius:18px;padding:22px 20px 18px;color:#173d2b;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+    #installGuide{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));background:rgba(16,40,31,.72);backdrop-filter:blur(8px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #installGuide .ig-card{width:min(430px,100%);overflow:hidden;background:#fff;border-radius:18px;padding:22px 20px 18px;color:#173d2b;box-shadow:0 18px 50px rgba(0,0,0,.28)}
     #installGuide .ig-kicker{margin:0 0 5px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#557166}
     #installGuide h2{margin:0 0 8px;font-size:23px;line-height:1.2;color:#173d2b}
     #installGuide .ig-intro{margin:0 0 17px;color:#53665e;font-size:15px;line-height:1.45}
     #installGuide .ig-steps{display:grid;gap:10px;margin:0 0 16px}
     #installGuide .ig-step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start;padding:10px 11px;border:1px solid #d8e2dc;border-radius:12px;background:#f7faf8}
-    #installGuide .ig-num{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#173d2b;color:#fff;font-weight:800}
+    #installGuide .ig-num{display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;min-height:32px;border-radius:50%;background:#173d2b;color:#fff!important;font-size:15px!important;font-weight:800;line-height:1!important;text-align:center}
     #installGuide .ig-step strong{display:block;margin:1px 0 2px;font-size:15px}
-    #installGuide .ig-step span{display:block;color:#5c6c65;font-size:13px;line-height:1.35}
+    #installGuide .ig-step>div>span{display:block;color:#5c6c65;font-size:13px;line-height:1.35}
     #installGuide .ig-note{margin:0 0 16px;padding:10px 12px;border-radius:10px;background:#eef4f0;color:#425b50;font-size:13px;line-height:1.4}
     #installGuide .ig-actions{display:grid;gap:9px}
     #installGuide button{min-height:48px;border-radius:10px;border:1px solid #b9cabe;padding:10px 14px;font:700 15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}
     #installGuide .ig-primary{background:#173d2b;color:#fff;border-color:#173d2b}
     #installGuide .ig-secondary{background:#fff;color:#173d2b}
     #installGuide button:disabled{opacity:.62;cursor:default}
+    @media(max-height:720px){
+      #installGuide{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
+      #installGuide .ig-card{padding:15px 16px 13px}
+      #installGuide .ig-kicker{font-size:11px}
+      #installGuide h2{font-size:20px;margin-bottom:6px}
+      #installGuide .ig-intro{font-size:13px;line-height:1.32;margin-bottom:10px}
+      #installGuide .ig-steps{gap:7px;margin-bottom:10px}
+      #installGuide .ig-step{padding:7px 9px}
+      #installGuide .ig-note{margin-bottom:10px;padding:8px 10px;font-size:12px;line-height:1.3}
+      #installGuide .ig-actions{gap:7px}
+      #installGuide button{min-height:42px;padding:8px 12px;font-size:14px}
+    }
   `;
   document.head.appendChild(style);
 
