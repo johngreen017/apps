@@ -6,6 +6,15 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/live-version-check.yml'
+      - 'escalafon-online/index.html'
+      - 'escalafon-online/windows.html'
+      - 'escalafon-online/manifest.webmanifest'
+      - 'revisor-cargo-fiscal/index.html'
+      - 'revisor-cargo-fiscal/windows.html'
+      - 'revisor-cargo-fiscal/manifest.webmanifest'
+      - 'simulador-remuneraciones/index.html'
+      - 'simulador-remuneraciones/windows.html'
+      - 'simulador-remuneraciones/manifest.webmanifest'
 
 permissions:
   contents: read
@@ -37,9 +46,9 @@ jobs:
             done
           }
 
-          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/" "googleRetryCount"
-          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/" "googleRetryCount"
-          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/" "googleRetryCount"
+          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-0857" "ACCESS_BUILD='20261006-0857'"
+          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-0857" "ACCESS_BUILD='20261006-0857'"
+          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-0857" "ACCESS_BUILD='20261006-0857'"
 
           check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec" "El dispositivo confiable todavía se está sincronizando."
           check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec" "[120,350,800,1500,2400]"
