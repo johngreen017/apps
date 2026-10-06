@@ -33,7 +33,6 @@
     <div id="loading">Abriendo Escalafón Online…</div>
     <iframe id="app" title="Escalafón Online"
       src="https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec"
-      sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
       allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
   </main>
   <section id="googleLayer" hidden>
@@ -148,7 +147,7 @@ window.addEventListener('message',async event=>{
     await enablePush();
   }
 });
-app.addEventListener('load',()=>{[0,100,350].forEach(ms=>setTimeout(()=>{requestConfig();},ms));});
+app.addEventListener('load',()=>{shell.classList.add('ready');[0,100,350].forEach(ms=>setTimeout(()=>{requestConfig();},ms));});
 window.addEventListener('load',()=>{initGoogle();requestConfig();},{once:true});
 </script>
 </body>
