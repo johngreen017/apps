@@ -7,8 +7,13 @@
   const prefix=appId==='escalafon'?'escalafon-':'apps-'+appId+'-';
   const logoutKey='apps.'+appId+'.signed-out.v1';
   const trace=document.getElementById('bridgeTrace'),summary=document.getElementById('bridgeSummary');
-  const windowsDirect=/Windows NT/i.test(navigator.userAgent||'');
-  let source=null,sourceOrigin='',channel='',timer,lastState='OPENING',googlePromise,googleReady=false,owner=false,oneSignal=null,appAssigned=false;
+  const appOrigins={
+    escalafon:'https://escalafon-pns.vercel.app',
+    revisor:'https://revisor-cargo-l5.vercel.app',
+    simulador:'https://simulador-remuneraciones-delta.vercel.app'
+  };
+  const expectedOrigin=appOrigins[appId]||'';
+  let source=null,sourceOrigin='',channel='',timer,lastState='OPENING',googlePromise,googleReady=false,owner=false,oneSignal=null;
   const events=[];
   function log(state,detail=''){
     events.push(new Date().toLocaleTimeString('es-CL')+' '+state+(detail?' · '+detail:''));
@@ -16,7 +21,7 @@
     console.info('[access]',state,detail);
   }
   function fail(message){clearTimeout(timer);log('ERROR',message);document.getElementById('bridgeDiagnostics').open=true;shell.classList.remove('ready');document.getElementById('loadingText').textContent=message;document.getElementById('retry').hidden=false;}
-  function deadline(){clearTimeout(timer);if(windowsDirect)return;timer=setTimeout(()=>fail('No se completó el acceso. Último estado: '+lastState+'. Pulsa Reintentar.'),30000);}
+  function deadline(){clearTimeout(timer);timer=setTimeout(()=>fail('No se completó el acceso. Último estado: '+lastState+'. Pulsa Reintentar.'),30000);}
   function transition(state,detail=''){
     lastState=state;log(state,detail);
     if(['LOGIN_READY','GOOGLE_REQUIRED','GOOGLE_READY','APP_READY'].includes(state)){clearTimeout(timer);shell.classList.add('ready');}
@@ -33,19 +38,11 @@
     return (ipad||/Mobi|Android|iPhone|iPod/i.test(ua)?'mobile':'desktop')+':'+key;
   }
   function trustedOrigin(origin){
-    // Apps Script normalmente usa script.google.com/googleusercontent.com.
-    // En algunos navegadores el iframe sandboxed usa un origen opaco ("null").
-    // Ese caso solo puede enlazarse si además presenta el canal aleatorio de 256 bits
-    // generado para esta apertura; luego fijamos event.source para toda la sesión.
-    if(origin==='null')return true;
-    try{
-      const u=new URL(origin);
-      return u.protocol==='https:'&&!u.port&&(u.hostname==='script.google.com'||u.hostname.endsWith('.googleusercontent.com'));
-    }catch(_){return false;}
+    return !!expectedOrigin&&origin===expectedOrigin;
   }
   function send(payload){
     if(!source)return false;
-    source.postMessage({...payload,channel,app:appId},sourceOrigin==='null'?'*':sourceOrigin);
+    source.postMessage({...payload,channel,app:appId},sourceOrigin);
     return true;
   }
   function loadGoogle(){
@@ -114,18 +111,15 @@
     }
   });
   document.getElementById('retry').onclick=()=>location.reload();
-  app.addEventListener('load',()=>{log('IFRAME_LOADED');if(windowsDirect&&appAssigned)transition('APP_READY','Windows: iframe cargado');});
+  app.addEventListener('load',()=>log('IFRAME_LOADED'));
   log('LAUNCHER_LOADED');
   try{
     const device=stableDevice();
     const url=new URL(app.dataset.src);
     url.searchParams.set('device',device);
-    url.searchParams.set('embedded','true');
     channel=hex();
     url.searchParams.set('bridge',channel);
-    if(windowsDirect)url.searchParams.set('direct','1');
     transition('OPENING');
-    appAssigned=true;
     app.src=url.href;
   }catch(e){fail(e.message||'Habilita el almacenamiento del navegador para identificar este dispositivo.');}
 })();
