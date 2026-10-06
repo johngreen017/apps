@@ -46,6 +46,7 @@ const shell=document.getElementById('shell');
 const googleLayer=document.getElementById('googleLayer');
 const googleStatus=document.getElementById('googleStatus');
 let appSource=null,appOrigin='',googleClientId='',oneSignalAppId='',googleReady=false,owner=false,oneSignal=null,oneSignalLoading=false;
+let googleRetryCount=0;
 
 function trustedAppMessage(event){
   if(event.source!==app.contentWindow)return false;
@@ -81,7 +82,12 @@ function shareDevice(){const device=stableDevice();if(device)send({type:'escalaf
 function requestConfig(){send({type:'escalafon-request-bridge-config'},true);}
 
 function initGoogle(){
-  if(googleReady||!googleClientId||!window.google?.accounts?.id)return;
+  if(googleReady||!googleClientId)return;
+  if(!window.google?.accounts?.id){
+    if(googleRetryCount++<40)setTimeout(initGoogle,250);
+    return;
+  }
+  googleRetryCount=0;
   google.accounts.id.initialize({
     client_id:googleClientId,
     callback:r=>{
@@ -147,8 +153,14 @@ window.addEventListener('message',async event=>{
     await enablePush();
   }
 });
-app.addEventListener('load',()=>{shell.classList.add('ready');[0,100,350].forEach(ms=>setTimeout(()=>{requestConfig();},ms));});
-window.addEventListener('load',()=>{initGoogle();requestConfig();},{once:true});
+app.addEventListener('load',()=>{
+  shell.classList.add('ready');
+  [0,120,350,800,1500,2800].forEach(ms=>setTimeout(requestConfig,ms));
+});
+window.addEventListener('load',()=>{
+  initGoogle();
+  [0,150,500,1100,2200,3500].forEach(ms=>setTimeout(requestConfig,ms));
+},{once:true});
 </script>
 </body>
 </html>
