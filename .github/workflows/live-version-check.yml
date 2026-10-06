@@ -96,7 +96,7 @@ jobs:
           check "Simulador Vercel" "https://simulador-remuneraciones-delta.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
 
           DEVICE='desktop:0000000000000000000000000000000000000000000000000000000000000000'
-          api_check "Escalafon" "https://escalafon-pns.vercel.app/api/rpc" '{"method":"ownerDeviceStatus","args":["'"$DEVICE"'"]}'
+          api_check "Escalafon" "https://escalafon-pns.vercel.app/api/rpc" '{"method":"bridgeApi","args":["ownerDeviceStatus",{"device":"'"$DEVICE"'"}]}'
           api_check "Revisor" "https://revisor-cargo-l5.vercel.app/api/rpc" '{"method":"bridgeApi","args":["estadoDispositivoAdministrador",{"device":"'"$DEVICE"'"}]}'
           api_check "Simulador" "https://simulador-remuneraciones-delta.vercel.app/api/rpc" '{"method":"bridgeApi","args":["estadoDispositivoAdministrador",{"device":"'"$DEVICE"'"}]}'
 
@@ -104,6 +104,7 @@ jobs:
           esc="$(curl -sS -L --connect-timeout 10 --max-time 30 https://escalafon-pns.vercel.app/)"
           rev="$(curl -sS -L --connect-timeout 10 --max-time 30 https://revisor-cargo-l5.vercel.app/)"
           sim="$(curl -sS -L --connect-timeout 10 --max-time 30 https://simulador-remuneraciones-delta.vercel.app/)"
+          grep -Fq "return body;})" <<<"$esc"
           grep -Fq "return body;})" <<<"$rev"
           grep -Fq "return body;})" <<<"$sim"
           ! grep -Fq "script.google.com" <<<"$esc"
