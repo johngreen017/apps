@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/live-version-check.yml'
+      - 'access-bridge.js'
+      - 'tests/access-bridge.test.cjs'
       - 'escalafon-online/index.html'
       - 'escalafon-online/windows.html'
       - 'escalafon-online/manifest.webmanifest'
@@ -35,7 +37,7 @@ jobs:
             simulador-remuneraciones/index.html simulador-remuneraciones/windows.html
           )
           grep -F "data-src=" "${files[@]}" >/dev/null
-          grep -F "startAppWithStableDevice_" "${files[@]}" >/dev/null
+          node --test tests/access-bridge.test.cjs
           if grep -F "if(event.source!==app.contentWindow)return false;" "${files[@]}"; then
             echo "Persistió la validación incompatible con el iframe interno de Apps Script."
             exit 1
@@ -47,7 +49,7 @@ jobs:
           set -euo pipefail
           check() {
             local name="$1" url="$2" marker="$3"
-            for suffix in "" "?audit=$(date +%s)"; do
+            for suffix in "" "&audit=$(date +%s)"; do
               echo "===== $name $suffix ====="
               body="$(mktemp)"
               headers="$(mktemp)"
@@ -60,22 +62,16 @@ jobs:
                 echo "--- fragmento ---"
                 head -c 800 "$body" | tr '\n' ' '
                 echo
+                exit 1
               fi
             done
           }
 
-          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-0608-r2" "ACCESS_BUILD='20261006-0608-r2'"
-          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-0608-r2" "ACCESS_BUILD='20261006-0608-r2'"
-          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-0608-r2" "ACCESS_BUILD='20261006-0608-r2'"
+          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-b1" "access-bridge.js?v=20261006-b1"
+          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-b1" "access-bridge.js?v=20261006-b1"
+          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-b1" "access-bridge.js?v=20261006-b1"
 
-          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec" "El dispositivo confiable todavía se está sincronizando."
-          check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec" "[120,350,800,1500,2400]"
-          check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec" "[120,350,800,1500,2400]"
+          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-b1" "apps-bridge-ready"
+          check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec?build=20261006-b1" "apps-bridge-ready"
+          check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec?build=20261006-b1" "apps-bridge-ready"
 
-          echo "===== Fragmentos reales Revisor ====="
-          curl -sS -L -H 'Cache-Control: no-cache' "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec?inspect=$(date +%s)" \
-            | grep -nE 'bridgeStorageReady|1200|3500|apps-admin-google-required|adminGoogleInitialized' | head -50 || true
-
-          echo "===== Fragmentos reales Simulador ====="
-          curl -sS -L -H 'Cache-Control: no-cache' "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec?inspect=$(date +%s)" \
-            | grep -nE 'bridgeStorageReady|1200|3500|apps-admin-google-required|adminGoogleInitialized' | head -50 || true

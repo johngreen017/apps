@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/runtime-health.yml'
+      - 'access-bridge.js'
+      - 'tests/access-bridge.test.cjs'
       - 'escalafon-online/index.html'
       - 'escalafon-online/windows.html'
       - 'revisor-cargo-fiscal/index.html'
@@ -36,8 +38,7 @@ jobs:
             echo "Se detectó aislamiento de iframe incompatible con el runtime de Apps Script."
             exit 1
           fi
-          grep -Fq "shell.classList.add('ready')" escalafon-online/index.html
-          grep -Fq "shell.classList.add('ready')" escalafon-online/windows.html
+          node --test tests/access-bridge.test.cjs
 
       - name: Comprobar GitHub Pages y Apps Script
         shell: bash
