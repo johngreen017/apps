@@ -1,6 +1,6 @@
 {
-  "name": "Escalafón Online",
-  "short_name": "Escalafón",
+  "name": "Escalafón PNS",
+  "short_name": "Escalafón PNS",
   "start_url": "./?build=20261006-0608-r2",
   "scope": "./",
   "display": "standalone",
