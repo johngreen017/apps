@@ -17,3 +17,5 @@ test('missing bridge exposes bounded error and a retry action',()=>{const a=boot
 test('all mobile and Windows entrypoints use the same executable bridge',()=>{for(const folder of ['escalafon-online','revisor-cargo-fiscal','simulador-remuneraciones'])for(const file of ['index.html','windows.html']){const html=fs.readFileSync(require('node:path').join(__dirname,'..',folder,file),'utf8');assert.match(html,/src="\.\.\/access-bridge.js\?v=/);assert.doesNotMatch(html,/<script[^>]+src=[^>]+>\s*function/);}});
 
 test('Windows direct mode never redirects the top page and tags the iframe URL as direct',()=>{const a=boot(new Map(),{platform:'Win32',userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',maxTouchPoints:0});assert.equal(a.url.searchParams.get('direct'),'1');assert.match(a.url.searchParams.get('device'),/^desktop:[a-f0-9]{64}$/);});
+
+test('embedded mode is always requested from Apps Script',()=>{const a=boot();assert.equal(a.url.searchParams.get('embedded'),'true');});
