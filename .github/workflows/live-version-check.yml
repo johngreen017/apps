@@ -67,11 +67,11 @@ jobs:
             done
           }
 
-          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-push3" "access-bridge.js?v=20261006-push3"
+          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-push4" "access-bridge.js?v=20261006-push4"
           check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-push3" "access-bridge.js?v=20261006-push3"
           check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-push3" "access-bridge.js?v=20261006-push3"
 
-          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-push3" "apps-bridge-ready"
+          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec?build=20261006-push4" "apps-bridge-ready"
           check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec?build=20261006-push3" "apps-bridge-ready"
           check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec?build=20261006-push3" "apps-bridge-ready"
 
