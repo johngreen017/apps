@@ -1,0 +1,42 @@
+name: Verificar versión pública real
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comparar contenido público con y sin cache busting
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            local name="$1" url="$2" marker="$3"
+            for suffix in "" "?audit=$(date +%s)"; do
+              echo "===== $name $suffix ====="
+              body="$(mktemp)"
+              headers="$(mktemp)"
+              curl -sS -L --connect-timeout 10 --max-time 30 -D "$headers" -o "$body"                 -H 'Cache-Control: no-cache, no-store, max-age=0'                 -H 'Pragma: no-cache'                 -A 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'                 "$url$suffix"
+              grep -Ei '^(HTTP/|cache-control:|age:|etag:|last-modified:|content-type:|location:)' "$headers" | tail -30 || true
+              if grep -Fq "$marker" "$body"; then
+                echo "MARKER=SI"
+              else
+                echo "MARKER=NO"
+                echo "--- fragmento ---"
+                head -c 800 "$body" | tr '\n' ' '
+                echo
+              fi
+            done
+          }
+
+          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/" "googleRetryCount"
+          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/" "googleRetryCount"
+          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/" "googleRetryCount"
+
+          check "Escalafon GAS" "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec" "OWNER_TRUST_RESET_VERSION_"
+          check "Revisor GAS" "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec" "ADMIN_TRUST_RESET_VERSION_"
+          check "Simulador GAS" "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec" "ADMIN_TRUST_RESET_VERSION_"
