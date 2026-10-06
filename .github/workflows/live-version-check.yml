@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/live-version-check.yml'
       - 'access-bridge.js'
+      - 'install-guide.js'
       - 'tests/access-bridge.test.cjs'
       - 'escalafon-online/index.html'
       - 'escalafon-online/windows.html'
@@ -38,6 +39,8 @@ jobs:
           )
           grep -F "data-src=" "${files[@]}" >/dev/null
           node --test tests/access-bridge.test.cjs
+          node --check install-guide.js
+          grep -F 'install-guide.js?v=20261006-install1' escalafon-online/index.html revisor-cargo-fiscal/index.html simulador-remuneraciones/index.html >/dev/null
           if grep -F "if(event.source!==app.contentWindow)return false;" "${files[@]}"; then
             echo "Persistió la validación incompatible con el iframe interno de Apps Script."
             exit 1
