@@ -1,0 +1,51 @@
+name: Salud de acceso de las aplicaciones
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/runtime-health.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Comprobar GitHub Pages y Apps Script
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_url() {
+            local name="$1" url="$2" needle="$3"
+            local body headers meta
+            body="$(mktemp)"; headers="$(mktemp)"
+            meta="$(curl -L --connect-timeout 10 --max-time 30               -A 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'               -sS -D "$headers" -o "$body" -w '%{http_code}|%{url_effective}|%{content_type}' "$url")"
+            echo "===== $name ====="
+            echo "$meta"
+            grep -Ei '^(location|content-type|x-frame-options|content-security-policy):' "$headers" | tail -20 || true
+            if grep -Fq "$needle" "$body"; then
+              echo "CONTENIDO_ESPERADO=SI"
+            else
+              echo "CONTENIDO_ESPERADO=NO"
+              echo "--- Primeros 600 caracteres ---"
+              head -c 600 "$body" | tr '\n' ' ' || true
+              echo
+              exit 1
+            fi
+          }
+
+          check_url "GitHub Pages Escalafón"             "https://johngreen017.github.io/apps/escalafon-online/"             "Abriendo Escalafón Online"
+
+          check_url "Apps Script Escalafón"             "https://script.google.com/macros/s/AKfycbw1JKkWVX7qFp0_HkzuiUa508NpguohvRTwUYnuVl0iMMKzt1u4bHl0CtxDZmq3G4g/exec"             "Escalafón de Oficiales"
+
+          check_url "GitHub Pages Revisor"             "https://johngreen017.github.io/apps/revisor-cargo-fiscal/"             "Abriendo Revisor de Cargo Fiscal"
+
+          check_url "Apps Script Revisor"             "https://script.google.com/macros/s/AKfycbzZDRqPGO5638ZfEfuZVSOjfohLeyTlbpd9eE6CkqJppjp8T2-Nrp2Xilf-5LfRu0iR/exec"             "Revisor de Cargo Fiscal"
+
+          check_url "GitHub Pages Simulador"             "https://johngreen017.github.io/apps/simulador-remuneraciones/"             "Abriendo Simulador de Remuneraciones"
+
+          check_url "Apps Script Simulador"             "https://script.google.com/macros/s/AKfycbzq5NkAorgviuYAGVPBOjHgN9vMh7tgAXaCi7jcDo729NHOMDCz4FCiXvvO4vxakGQu/exec"             "Simulador de Remuneraciones"
