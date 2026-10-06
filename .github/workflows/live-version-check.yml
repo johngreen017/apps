@@ -87,13 +87,13 @@ jobs:
             grep -Fq '"ok":true' "$body"
           }
 
-          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-vercel1" "access-bridge.js?v=20261006-vercel1"
-          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-vercel1" "access-bridge.js?v=20261006-vercel1"
-          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-vercel1" "access-bridge.js?v=20261006-vercel1"
+          check "Escalafon launcher" "https://johngreen017.github.io/apps/escalafon-online/?build=20261006-push3" "$(grep -oE 'access-bridge.js[?]v=[^"]+' escalafon-online/index.html)"
+          check "Revisor launcher" "https://johngreen017.github.io/apps/revisor-cargo-fiscal/?build=20261006-push3" "$(grep -oE 'access-bridge.js[?]v=[^"]+' revisor-cargo-fiscal/index.html)"
+          check "Simulador launcher" "https://johngreen017.github.io/apps/simulador-remuneraciones/?build=20261006-push3" "$(grep -oE 'access-bridge.js[?]v=[^"]+' simulador-remuneraciones/index.html)"
 
-          check "Escalafon Vercel" "https://escalafon-pns.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
-          check "Revisor Vercel" "https://revisor-cargo-l5.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
-          check "Simulador Vercel" "https://simulador-remuneraciones-delta.vercel.app/?build=20261006-vercel1" "apps-bridge-ready"
+          check "Escalafon Vercel" "https://escalafon-pns.vercel.app/?build=20261006-push3" "apps-bridge-ready"
+          check "Revisor Vercel" "https://revisor-cargo-l5.vercel.app/?build=20261006-push3" "apps-bridge-ready"
+          check "Simulador Vercel" "https://simulador-remuneraciones-delta.vercel.app/?build=20261006-push3" "apps-bridge-ready"
 
           DEVICE='desktop:0000000000000000000000000000000000000000000000000000000000000000'
           api_check "Escalafon" "https://escalafon-pns.vercel.app/api/rpc" '{"method":"bridgeApi","args":["ownerDeviceStatus",{"device":"'"$DEVICE"'"}]}'
