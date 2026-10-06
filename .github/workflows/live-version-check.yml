@@ -78,7 +78,7 @@ jobs:
             local name="$1" url="$2" json="$3"
             echo "===== API $name ====="
             body="$(mktemp)"
-            code="$(curl -sS -L --connect-timeout 10 --max-time 30 -o "$body" -w '%{http_code}' \
+            code="$(curl -sS -L --connect-timeout 10 --max-time 60 -o "$body" -w '%{http_code}' \
               -H 'content-type: application/json' \
               --data "$json" "$url")"
             cat "$body"
