@@ -70,18 +70,24 @@
       status.textContent='Confirma tu identidad con Google.';transition('GOOGLE_READY');
     }catch(e){status.textContent=e.message;fail(e.message);}
   }
+  let pushRegistrationId='',pushRegistrationTimer;
+  function pushError(message,needsApi=false){send({type:prefix+'push-status',enabled:false,error:message,needsApi});}
   async function sharePush(){
     if(!owner||!oneSignal)return;
     const enabled=oneSignal.User.PushSubscription.optedIn,id=oneSignal.User.PushSubscription.id;
-    if(enabled&&id)send({type:prefix+'push-subscription',subscriptionId:id});
-    send({type:prefix+'push-status',enabled:!!(enabled&&id)});
+    if(!enabled||!id){pushRegistrationId='';send({type:prefix+'push-status',enabled:false});return;}
+    if(pushRegistrationId===id)return;
+    pushRegistrationId=id;
+    clearTimeout(pushRegistrationTimer);
+    pushRegistrationTimer=setTimeout(()=>{pushRegistrationId='';pushError('El servidor no confirmó el registro. Pulsa Activar notificaciones para reintentar.');},20000);
+    send({type:prefix+'push-subscription',subscriptionId:id});
   }
   let pushPromise;
   function ensurePush(){
     if(pushPromise)return pushPromise;
     pushPromise=new Promise((resolve,reject)=>{
       window.OneSignalDeferred=window.OneSignalDeferred||[];
-      window.OneSignalDeferred.push(async sdk=>{try{await sdk.init({appId:'0956c8db-37fb-4a11-98bd-397d121ae8fa',serviceWorkerParam:{scope:new URL('.',location.href).pathname},serviceWorkerPath:new URL('OneSignalSDKWorker.js',location.href).pathname});oneSignal=sdk;resolve();await sharePush();}catch(e){reject(e);}});
+      window.OneSignalDeferred.push(async sdk=>{try{await sdk.init({appId:'0956c8db-37fb-4a11-98bd-397d121ae8fa',serviceWorkerParam:{scope:new URL('.',location.href).pathname},serviceWorkerPath:new URL('OneSignalSDKWorker.js',location.href).pathname});oneSignal=sdk;sdk.User.PushSubscription.addEventListener('change',()=>{pushRegistrationId='';void sharePush();});sdk.Notifications.addEventListener('permissionChange',()=>{pushRegistrationId='';void sharePush();});resolve();await sharePush();}catch(e){reject(e);}});
       const s=document.createElement('script');s.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';s.defer=true;s.onerror=()=>reject(Error('No cargaron las notificaciones.'));document.head.appendChild(s);
     });return pushPromise;
   }
@@ -105,9 +111,14 @@
     }else if(d.type==='apps-admin-google-result'||d.type==='escalafon-google-result'){
       if(d.ok===true){googleLayer.hidden=true;}else{transition('GOOGLE_REQUIRED');googleLayer.hidden=false;status.textContent='Google no pudo validar el acceso. Revisa el mensaje de la aplicación.';}
     }else if(d.type===prefix+'owner-session'){
-      owner=d.owner===true;if(owner)ensurePush().catch(()=>{});
+      owner=d.owner===true;if(owner)ensurePush().catch(e=>pushError(e.message||'No fue posible preparar las notificaciones.'));else{pushRegistrationId='';clearTimeout(pushRegistrationTimer);}
+    }else if(d.type===prefix+'push-registration-result'&&owner){
+      if(d.subscriptionId!==pushRegistrationId)return;
+      clearTimeout(pushRegistrationTimer);
+      if(d.ok&&d.apiConfigurada){send({type:prefix+'push-status',enabled:true});}
+      else{pushRegistrationId='';pushError(d.error||(d.apiConfigurada===false?'Falta configurar la App API Key de OneSignal en esta aplicación.':'El servidor no confirmó el dispositivo.'),d.ok===true&&d.apiConfigurada===false);}
     }else if(d.type===prefix+'enable-push'&&owner){
-      try{await ensurePush();await oneSignal.Notifications.requestPermission();await oneSignal.User.PushSubscription.optIn();await sharePush();}catch(e){send({type:prefix+'push-status',enabled:false,error:'No fue posible activar las notificaciones.'});}
+      try{await ensurePush();if(!oneSignal.Notifications.isPushSupported())throw Error('En iPhone/iPad, agrega esta app a la pantalla de inicio y ábrela desde su icono para activar notificaciones.');await oneSignal.Notifications.requestPermission();if(!oneSignal.Notifications.permission)throw Error('Permite las notificaciones de esta app en los ajustes del dispositivo.');await oneSignal.User.PushSubscription.optIn();pushRegistrationId='';await sharePush();}catch(e){pushError(e.message||'No fue posible activar las notificaciones.');}
     }
   });
   document.getElementById('retry').onclick=()=>location.reload();
@@ -123,3 +134,4 @@
     app.src=url.href;
   }catch(e){fail(e.message||'Habilita el almacenamiento del navegador para identificar este dispositivo.');}
 })();
+

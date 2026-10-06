@@ -1,0 +1,14 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
+async function setup(){
+ const sent=[],listeners={},sdkListeners={},elements=new Map(),source={postMessage:m=>sent.push(m)},storage=new Map();
+ const element=()=>({textContent:'',hidden:true,dataset:{app:'revisor',src:'https://revisor-cargo-l5.vercel.app/'},addEventListener(){},classList:{add(){},remove(){}}});
+ const sdk={init:async()=>{},User:{PushSubscription:{id:'subscription-one',optedIn:true,addEventListener:(n,f)=>sdkListeners[n]=f,optIn:async()=>{}}},Notifications:{permission:true,isPushSupported:()=>true,requestPermission:async()=>{},addEventListener:(n,f)=>sdkListeners[n]=f}};
+ const window={addEventListener:(n,f)=>listeners[n]=f};const context=vm.createContext({window,document:{getElementById:id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:()=>({}),head:{appendChild:()=>{Promise.resolve().then(()=>window.OneSignalDeferred[0](sdk));}}},crypto:crypto.webcrypto,navigator:{userAgent:'Chrome',platform:'Win32',maxTouchPoints:0},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},console:{info(){}},URL,location:{href:'https://johngreen017.github.io/apps/revisor-cargo-fiscal/'},setTimeout:()=>1,clearTimeout(){}});
+ vm.runInContext(fs.readFileSync('access-bridge.js','utf8'),context);const channel=new URL(elements.get('app').src).searchParams.get('bridge');
+ const emit=async data=>{await listeners.message({data:{...data,channel,app:'revisor'},source,origin:'https://revisor-cargo-l5.vercel.app'});await Promise.resolve();await Promise.resolve();};
+ await emit({type:'apps-bridge-ready',version:1});await emit({type:'apps-revisor-owner-session',owner:true});await Promise.resolve();
+ return{sent,emit,sdk,sdkListeners};
+}
+test('browser permission alone never reports notification readiness',async()=>{const x=await setup();assert.ok(x.sent.some(m=>m.type==='apps-revisor-push-subscription'));assert.ok(!x.sent.some(m=>m.enabled===true));await x.emit({type:'apps-revisor-push-registration-result',subscriptionId:'subscription-one',ok:true,apiConfigurada:true});assert.equal(x.sent.at(-1).enabled,true);});
+test('missing server key reports API pending',async()=>{const x=await setup();await x.emit({type:'apps-revisor-push-registration-result',subscriptionId:'subscription-one',ok:true,apiConfigurada:false});assert.equal(x.sent.at(-1).needsApi,true);assert.equal(x.sent.at(-1).enabled,false);});
+test('subscription change resynchronizes backend binding',async()=>{const x=await setup();x.sdk.User.PushSubscription.id='subscription-two';await x.sdkListeners.change();assert.equal(x.sent.at(-1).subscriptionId,'subscription-two');});
