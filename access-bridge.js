@@ -66,7 +66,6 @@
   }
   let pushPromise;
   function ensurePush(){
-    if(appId==='revisor')return Promise.resolve();
     if(pushPromise)return pushPromise;
     pushPromise=new Promise((resolve,reject)=>{
       window.OneSignalDeferred=window.OneSignalDeferred||[];
