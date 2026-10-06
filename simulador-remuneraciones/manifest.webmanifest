@@ -2,7 +2,7 @@
   "name": "Simulador de Remuneraciones",
   "short_name": "Simulador",
   "id": "/apps/simulador-remuneraciones/",
-  "start_url": "./",
+  "start_url": "./?build=20261006-0857",
   "scope": "./",
   "display": "standalone",
   "background_color": "#173d2b",
