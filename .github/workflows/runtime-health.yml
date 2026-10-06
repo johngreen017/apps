@@ -6,6 +6,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/runtime-health.yml'
+      - 'escalafon-online/index.html'
+      - 'escalafon-online/windows.html'
+      - 'revisor-cargo-fiscal/index.html'
+      - 'revisor-cargo-fiscal/windows.html'
+      - 'simulador-remuneraciones/index.html'
+      - 'simulador-remuneraciones/windows.html'
 
 permissions:
   contents: read
@@ -15,6 +21,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar lanzadores sin aislamiento incompatible
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            escalafon-online/index.html escalafon-online/windows.html
+            revisor-cargo-fiscal/index.html revisor-cargo-fiscal/windows.html
+            simulador-remuneraciones/index.html simulador-remuneraciones/windows.html
+          )
+          if grep -En 'credentialless|<iframe[^>]*sandbox=|^[[:space:]]*sandbox=' "${files[@]}"; then
+            echo "Se detectó aislamiento de iframe incompatible con el runtime de Apps Script."
+            exit 1
+          fi
+          grep -Fq "shell.classList.add('ready')" escalafon-online/index.html
+          grep -Fq "shell.classList.add('ready')" escalafon-online/windows.html
+
       - name: Comprobar GitHub Pages y Apps Script
         shell: bash
         run: |
