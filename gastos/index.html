@@ -18,7 +18,7 @@
   <style>
     *{box-sizing:border-box}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
-    #shell{position:fixed;inset:0;background:#000;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom)}
+    #shell{position:fixed;inset:0;background:#000}
     iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
     #loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;z-index:2;color:#fff;font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#000;text-align:center}
     .ready #loading{display:none}
@@ -35,7 +35,7 @@
   <main id="shell">
     <div id="loading"><div><p id="loadingText">Abriendo Mis Gastos…</p><button id="retry" hidden>Reintentar</button></div></div>
     <iframe id="app" data-app="gastos" title="Mis Gastos"
-      data-src="https://mis-gastos-ecru.vercel.app/?build=20261017-vercel1"
+      data-src="https://mis-gastos-ecru.vercel.app/?build=20261017-layout2"
       allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
   </main>
   <details id="bridgeDiagnostics"><summary id="bridgeSummary">Diagnóstico</summary><pre id="bridgeTrace"></pre></details>
