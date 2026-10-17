@@ -10,7 +10,8 @@
   const appOrigins={
     escalafon:'https://escalafon-pns.vercel.app',
     revisor:'https://revisor-cargo-l5.vercel.app',
-    simulador:'https://simulador-remuneraciones-delta.vercel.app'
+    simulador:'https://simulador-remuneraciones-delta.vercel.app',
+    gastos:'https://mis-gastos-ecru.vercel.app'
   };
   const expectedOrigin=appOrigins[appId]||'';
   let source=null,sourceOrigin='',channel='',timer,lastState='OPENING',googlePromise,googleReady=false,owner=false,oneSignal=null;
