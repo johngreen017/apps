@@ -31,9 +31,23 @@
     if(state==='APP_READY'){googleLayer.hidden=true;document.getElementById('bridgeDiagnostics').open=false;}
   }
   function hex(){return Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');}
+  const DEVICE_STORAGE_KEY='apps.admin.device.v1';
+  const DEVICE_COOKIE_KEY='apps_admin_device_v1';
+  function readDeviceCookie_(){
+    const match=document.cookie.split(';').map(v=>v.trim()).find(v=>v.startsWith(DEVICE_COOKIE_KEY+'='));
+    if(!match)return '';
+    try{return decodeURIComponent(match.slice(DEVICE_COOKIE_KEY.length+1));}catch(_){return '';}
+  }
+  function writeDeviceCookie_(key){
+    document.cookie=DEVICE_COOKIE_KEY+'='+encodeURIComponent(key)+'; Path=/apps/; Max-Age=315360000; SameSite=Lax; Secure';
+  }
   function stableDevice(){
-    let key=localStorage.getItem('apps.admin.device.v1');
-    if(!key){key=hex();localStorage.setItem('apps.admin.device.v1',key);}
+    let key='';
+    try{key=localStorage.getItem(DEVICE_STORAGE_KEY)||'';}catch(_){}
+    if(!/^[a-f0-9]{64}$/.test(key))key=readDeviceCookie_();
+    if(!/^[a-f0-9]{64}$/.test(key))key=hex();
+    try{localStorage.setItem(DEVICE_STORAGE_KEY,key);}catch(_){}
+    writeDeviceCookie_(key);
     if(!/^[a-f0-9]{64}$/.test(key))throw Error('El identificador guardado del dispositivo no es válido.');
     const ua=navigator.userAgent||'',ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
     return (ipad||/Mobi|Android|iPhone|iPod/i.test(ua)?'mobile':'desktop')+':'+key;
