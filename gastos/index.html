@@ -7,180 +7,44 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <meta name="apple-mobile-web-app-title" content="Mis Gastos">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
-  <link rel="manifest" href="./site.webmanifest?v=2">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Mis Gastos">
+  <meta name="application-name" content="Mis Gastos">
+  <link rel="icon" type="image/png" href="apple-touch-icon.png?v=20261017">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20261017">
+  <link rel="manifest" href="site.webmanifest?v=20261017">
   <title>Mis Gastos</title>
   <style>
     *{box-sizing:border-box}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
-    #shell{position:fixed;inset:0;background:#000}
-    iframe{position:absolute;inset:0;width:100%;height:calc(100% + 52px);border:0;background:#000}
-    #loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;z-index:2;color:#fff;font:700 18px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#000}
+    #shell{position:fixed;inset:0;background:#000;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom)}
+    iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    #loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;z-index:2;color:#fff;font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#000;text-align:center}
     .ready #loading{display:none}
-    #googleLayer{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:8;width:min(92vw,360px);padding:13px;background:#171719f2;border:1px solid rgba(255,255,255,.14);border-radius:16px;box-shadow:0 12px 36px rgba(0,0,0,.55);text-align:center}
+    #googleLayer{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;width:min(92vw,360px);padding:12px;background:#fffffff2;border:1px solid #d5e4dc;border-radius:15px;box-shadow:0 10px 30px #0007;text-align:center}
     #googleLayer[hidden]{display:none}
     #googleButton{min-height:44px;display:flex;justify-content:center}
-    #googleStatus{margin:8px 0 0;color:#b4b4bc;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4}
+    #googleStatus{margin:7px 0 0;color:#51675f;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #bridgeDiagnostics{display:none!important;position:fixed;top:calc(8px + env(safe-area-inset-top));right:8px;z-index:20;max-width:94vw;background:#fff;color:#174b35;padding:6px 10px;border:1px solid #b9cabe;border-radius:8px;font:12px system-ui}
+    #bridgeDiagnostics pre{white-space:pre-wrap;max-height:45vh;overflow:auto}
+    #retry{padding:12px 22px;border-radius:10px;font:inherit}
   </style>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <main id="shell">
-    <div id="loading">Abriendo Mis Gastos…</div>
-    <iframe
-      id="app"
-      data-app="gastos"
-      title="Mis Gastos"
-      data-src="https://script.google.com/macros/s/AKfycbzdNtR7b012lsaqEnpHMgXHtGDJn-VqSmpIIkuQ3U7TB8Wy9OtTdlr3zZF_GQV0QFJdsA/exec?view=app"
-      sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
-      allow="clipboard-read; clipboard-write"
-      referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <div id="loading"><div><p id="loadingText">Abriendo Mis Gastos…</p><button id="retry" hidden>Reintentar</button></div></div>
+    <iframe id="app" data-app="gastos" title="Mis Gastos"
+      data-src="https://mis-gastos-ecru.vercel.app/?build=20261017-vercel1"
+      allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
   </main>
-  <section id="googleLayer" hidden aria-label="Acceso seguro con Google">
+  <details id="bridgeDiagnostics"><summary id="bridgeSummary">Diagnóstico</summary><pre id="bridgeTrace"></pre></details>
+  <section id="googleLayer" hidden>
     <div id="googleButton"></div>
-    <p id="googleStatus">Autoriza este dispositivo con tu cuenta Google.</p>
+    <p id="googleStatus">Acceso seguro con Google</p>
   </section>
   <noscript>Activa JavaScript para abrir Mis Gastos.</noscript>
-<script>
-const app=document.getElementById("app");
-const shell=document.getElementById("shell");
-const googleLayer=document.getElementById("googleLayer");
-const googleStatus=document.getElementById("googleStatus");
-const DEVICE_STORAGE="apps.misgastos.device.v2";
-let appSource=null;
-let appOrigin="";
-let googleClientId="";
-let googleReady=false;
-let bridgeChannel="";
-
-function hex(){
-  return Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join("");
-}
-function trustedGoogleFrameOrigin(origin){
-  if(origin==="null")return true;
-  try{
-    const url=new URL(origin),host=url.hostname;
-    return url.protocol==="https:"&&(
-      host==="script.google.com"||
-      host==="googleusercontent.com"||
-      host.endsWith(".googleusercontent.com")
-    );
-  }catch(_){return false;}
-}
-function bindAppMessage(event){
-  const data=event.data;
-  if(!data||typeof data!=="object"||data.app!=="gastos"||data.channel!==bridgeChannel)return false;
-  if(!trustedGoogleFrameOrigin(event.origin)||!event.source)return false;
-  if(!appSource){
-    if(data.type!=="mg-bridge-ready"||data.version!==1)return false;
-    appSource=event.source;
-    appOrigin=event.origin;
-    return true;
-  }
-  return event.source===appSource&&event.origin===appOrigin;
-}
-function send(payload){
-  if(!appSource)return false;
-  const message={...payload,app:"gastos",channel:bridgeChannel};
-  appSource.postMessage(message,appOrigin==="null"?"*":appOrigin);
-  return true;
-}
-function stableDevice(){
-  try{
-    let key=localStorage.getItem(DEVICE_STORAGE);
-    if(!key){
-      const bytes=crypto.getRandomValues(new Uint8Array(32));
-      key=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
-      localStorage.setItem(DEVICE_STORAGE,key);
-    }
-    if(!/^[a-f0-9]{64}$/.test(key))return "";
-    const ua=navigator.userAgent||"";
-    const ipad=/iPad/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-    return ((ipad||/Mobi|Android|iPhone|iPod/i.test(ua))?"mobile":"desktop")+":"+key;
-  }catch(_){return "";}
-}
-function shareDevice(){
-  const device=stableDevice();
-  if(device)send({type:"mg-device-key",device});
-}
-function requestConfig(){send({type:"mg-request-bridge-config"},true);}
-function initGoogle(){
-  if(googleReady||!googleClientId||!window.google?.accounts?.id)return;
-  google.accounts.id.initialize({
-    client_id:googleClientId,
-    callback:response=>{
-      const credential=String(response&&response.credential||"");
-      if(!credential){googleStatus.textContent="Google no entregó una credencial válida.";return;}
-      googleStatus.textContent="Validando la cuenta…";
-      send({type:"mg-google-credential",credential});
-    },
-    auto_select:false,
-    cancel_on_tap_outside:false
-  });
-  google.accounts.id.renderButton(
-    document.getElementById("googleButton"),
-    {type:"standard",theme:"outline",size:"large",text:"signin_with",shape:"rectangular",width:320,locale:"es"}
-  );
-  googleReady=true;
-}
-function forgetDevice(){
-  try{localStorage.removeItem(DEVICE_STORAGE);}catch(_){}
-}
-window.addEventListener("message",event=>{
-  if(!bindAppMessage(event))return;
-  const data=event.data;
-  if(data.type==="mg-bridge-ready"){
-    shareDevice();
-    send({type:"mg-request-bridge-config"});
-  }else if(data.type==="mg-bridge-config"){
-    if(typeof data.googleClientId==="string"&&/\.apps\.googleusercontent\.com$/.test(data.googleClientId)){
-      googleClientId=data.googleClientId;
-      initGoogle();
-      shareDevice();
-    }
-  }else if(data.type==="mg-request-device-key"){
-    shareDevice();
-  }else if(data.type==="mg-google-login"){
-    googleLayer.hidden=data.visible!==true;
-    if(!googleLayer.hidden){
-      shell.classList.add("ready");
-      googleStatus.textContent="Autoriza este dispositivo con tu cuenta Google.";
-      initGoogle();
-    }
-  }else if(data.type==="mg-google-result"){
-    if(data.ok===true){
-      googleLayer.hidden=true;
-      googleStatus.textContent="Acceso seguro con Google.";
-    }else{
-      googleStatus.textContent="No se pudo ingresar con Google.";
-    }
-  }else if(data.type==="mg-app-ready"){
-    shell.classList.add("ready");
-  }else if(data.type==="mg-forget-device"){
-    forgetDevice();
-  }else if(data.type==="mg-logout-complete"){
-    forgetDevice();
-    googleLayer.hidden=true;
-  }
-});
-app.addEventListener("load",()=>{
-  shell.classList.add("ready");
-});
-window.addEventListener("load",()=>{
-  initGoogle();
-  try{
-    bridgeChannel=hex();
-    const url=new URL(app.dataset.src);
-    url.searchParams.set("device",stableDevice());
-    url.searchParams.set("bridge",bridgeChannel);
-    app.src=url.href;
-  }catch(_){
-    document.getElementById("loading").textContent="No fue posible preparar el acceso seguro de este dispositivo.";
-  }
-},{once:true});
-</script>
+  <script src="../install-guide.js?v=20261006-install3" defer></script>
+  <script src="../access-bridge.js?v=20261017-gastos1" defer></script>
 </body>
 </html>
