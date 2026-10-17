@@ -32,9 +32,9 @@
     <div id="loading">Abriendo Mis Gastos…</div>
     <iframe
       id="app"
+      data-app="gastos"
       title="Mis Gastos"
-      src="https://script.google.com/macros/s/AKfycbzdNtR7b012lsaqEnpHMgXHtGDJn-VqSmpIIkuQ3U7TB8Wy9OtTdlr3zZF_GQV0QFJdsA/exec?view=app"
-      credentialless
+      data-src="https://script.google.com/macros/s/AKfycbzdNtR7b012lsaqEnpHMgXHtGDJn-VqSmpIIkuQ3U7TB8Wy9OtTdlr3zZF_GQV0QFJdsA/exec?view=app"
       sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
       allow="clipboard-read; clipboard-write"
       referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -54,26 +54,39 @@ let appSource=null;
 let appOrigin="";
 let googleClientId="";
 let googleReady=false;
+let bridgeChannel="";
 
-function trustedAppMessage(event){
-  if(event.source!==app.contentWindow)return false;
-  if(event.origin==='null'||event.origin==="null")return true;
+function hex(){
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function trustedGoogleFrameOrigin(origin){
+  if(origin==="null")return true;
   try{
-    const url=new URL(event.origin),host=url.hostname;
-    return url.protocol==="https:"&&(host==="script.google.com"||host==="googleusercontent.com"||host.endsWith(".googleusercontent.com"));
+    const url=new URL(origin),host=url.hostname;
+    return url.protocol==="https:"&&(
+      host==="script.google.com"||
+      host==="googleusercontent.com"||
+      host.endsWith(".googleusercontent.com")
+    );
   }catch(_){return false;}
 }
 function bindAppMessage(event){
-  if(!trustedAppMessage(event))return false;
-  appSource=event.source;
-  appOrigin=event.origin;
-  return true;
+  const data=event.data;
+  if(!data||typeof data!=="object"||data.app!=="gastos"||data.channel!==bridgeChannel)return false;
+  if(!trustedGoogleFrameOrigin(event.origin)||!event.source)return false;
+  if(!appSource){
+    if(data.type!=="mg-bridge-ready"||data.version!==1)return false;
+    appSource=event.source;
+    appOrigin=event.origin;
+    return true;
+  }
+  return event.source===appSource&&event.origin===appOrigin;
 }
-function send(payload,bootstrap=false){
-  const target=appSource||app.contentWindow;
-  if(!target)return;
-  if(appOrigin&&appOrigin!=="null")target.postMessage(payload,appOrigin);
-  else if(appSource||bootstrap)target.postMessage(payload,"*");
+function send(payload){
+  if(!appSource)return false;
+  const message={...payload,app:"gastos",channel:bridgeChannel};
+  appSource.postMessage(message,appOrigin==="null"?"*":appOrigin);
+  return true;
 }
 function stableDevice(){
   try{
@@ -117,9 +130,12 @@ function forgetDevice(){
   try{localStorage.removeItem(DEVICE_STORAGE);}catch(_){}
 }
 window.addEventListener("message",event=>{
-  if(!event.data||!bindAppMessage(event))return;
+  if(!bindAppMessage(event))return;
   const data=event.data;
-  if(data.type==="mg-bridge-config"){
+  if(data.type==="mg-bridge-ready"){
+    shareDevice();
+    send({type:"mg-request-bridge-config"});
+  }else if(data.type==="mg-bridge-config"){
     if(typeof data.googleClientId==="string"&&/\.apps\.googleusercontent\.com$/.test(data.googleClientId)){
       googleClientId=data.googleClientId;
       initGoogle();
@@ -151,12 +167,20 @@ window.addEventListener("message",event=>{
   }
 });
 app.addEventListener("load",()=>{
-  // Compatibilidad: el backend anterior sigue abriendo mientras se despliega la
-  // nueva autenticación. El nuevo backend oculta su propia pantalla al autenticar.
   shell.classList.add("ready");
-  [0,100,350].forEach(ms=>setTimeout(()=>{requestConfig();},ms));
 });
-window.addEventListener("load",()=>{initGoogle();requestConfig();},{once:true});
+window.addEventListener("load",()=>{
+  initGoogle();
+  try{
+    bridgeChannel=hex();
+    const url=new URL(app.dataset.src);
+    url.searchParams.set("device",stableDevice());
+    url.searchParams.set("bridge",bridgeChannel);
+    app.src=url.href;
+  }catch(_){
+    document.getElementById("loading").textContent="No fue posible preparar el acceso seguro de este dispositivo.";
+  }
+},{once:true});
 </script>
 </body>
 </html>
