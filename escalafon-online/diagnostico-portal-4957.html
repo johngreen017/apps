@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#174b35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Escalafón PNS">
+  <meta name="application-name" content="Escalafón PNS">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons-v3/icon-64.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons-v3/icon-180.png?v=3">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons-v3/icon-167.png?v=3">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons-v3/icon-152.png?v=3">
+  <link rel="apple-touch-icon" sizes="120x120" href="icons-v3/icon-120.png?v=3">
+  <link rel="manifest" href="manifest.webmanifest?v=9">
+  <title>Diagnóstico privado · Escalafón PNS</title>
+  <style>
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#eaf0ec}
+    #shell{position:fixed;inset:0;background:#eaf0ec}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+    #loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;z-index:2;color:#174b35;font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eaf0ec}
+    .ready #loading{display:none}
+    #googleLayer{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;width:min(92vw,360px);padding:12px;background:#fffffff2;border:1px solid #d5e4dc;border-radius:15px;box-shadow:0 10px 30px #0d30242e;text-align:center}
+    #googleLayer[hidden]{display:none}#googleButton{min-height:44px;display:flex;justify-content:center}
+    #googleStatus{margin:7px 0 0;color:#51675f;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  #bridgeDiagnostics{display:none!important;position:fixed;top:calc(8px + env(safe-area-inset-top));right:8px;z-index:20;max-width:94vw;background:#fff;color:#174b35;padding:6px 10px;border:1px solid #b9cabe;border-radius:8px;font:12px system-ui}#bridgeDiagnostics pre{white-space:pre-wrap;max-height:45vh;overflow:auto}#retry{padding:12px 22px;border-radius:10px;font:inherit}#loading{text-align:center}#shell{top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom)}
+  </style>
+  
+</head>
+<body>
+  <main id="shell">
+    <div id="loading"><div><p id="loadingText">Abriendo Escalafón Online…</p><button id="retry" hidden>Reintentar</button></div></div>
+    <iframe id="app" data-app="escalafon" title="Escalafón Online"
+      data-src="https://escalafon-8phw8pks0-johngreen017-3028.vercel.app/?build=20261019-diagnostico4957"
+      allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </main>
+  <details id="bridgeDiagnostics"><summary id="bridgeSummary">Diagnóstico</summary><pre id="bridgeTrace"></pre></details>
+  <section id="googleLayer" hidden>
+    <div id="googleButton"></div>
+    <p id="googleStatus">Acceso seguro con Google · 20261006-vercel1</p>
+  </section>
+  <noscript>Activa JavaScript para abrir Escalafón Online.</noscript>
+<script src="../install-guide.js?v=20261006-install3" defer></script>
+<script src="../access-bridge-diagnostico-4957.js?v=20261019-1" defer></script>
+</body>
+</html>
+
